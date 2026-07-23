@@ -17,11 +17,25 @@ class AppInfoHelper with WidgetsBindingObserver {
   static final AppInfoHelper _instance = AppInfoHelper._();
   static const MethodChannel _channel = MethodChannel('app_info_helper');
 
+  /// Shared singleton instance.
+  ///
+  /// Synchronous getters automatically start initialization when needed. The
+  /// first read may still return the documented fallback value while native
+  /// values are loading; await [init] or [ready] when the actual value is
+  /// required immediately.
+  static AppInfoHelper get instance => _instance;
+
   Map<String, dynamic> _data = <String, dynamic>{};
   Future<void>? _initializing;
   bool _observing = false;
 
   bool get isInitialized => _initializing == null && _data.isNotEmpty;
+
+  /// Ensures native values have been loaded, then returns [instance].
+  Future<AppInfoHelper> get ready async {
+    await init();
+    return this;
+  }
 
   /// Fetches all values once. Concurrent calls share the same native request.
   Future<void> init() => _initializing ??= _loadSafely().whenComplete(() {

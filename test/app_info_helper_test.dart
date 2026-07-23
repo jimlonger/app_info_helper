@@ -7,6 +7,10 @@ void main() {
 
   const channel = MethodChannel('app_info_helper');
 
+  test('instance is the shared singleton entry point', () {
+    expect(identical(AppInfoHelper.instance, AppInfoHelper()), isTrue);
+  });
+
   tearDown(() {
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(channel, null);
@@ -28,22 +32,22 @@ void main() {
       };
     });
 
-    await AppInfoHelper().refresh();
+    await AppInfoHelper.instance.refresh();
 
-    expect(AppInfoHelper().appName, 'Example');
-    expect(AppInfoHelper().packageName, 'com.example.app');
-    expect(AppInfoHelper().version, '1.2.3');
-    expect(AppInfoHelper().deviceModel, 'Pixel');
-    expect(AppInfoHelper().languageCode, 'zh');
-    expect(AppInfoHelper().languageCode3, 'zho');
-    expect(AppInfoHelper().countryCode, 'CN');
-    expect(AppInfoHelper().countryCode3, 'CHN');
+    expect(AppInfoHelper.instance.appName, 'Example');
+    expect(AppInfoHelper.instance.packageName, 'com.example.app');
+    expect(AppInfoHelper.instance.version, '1.2.3');
+    expect(AppInfoHelper.instance.deviceModel, 'Pixel');
+    expect(AppInfoHelper.instance.languageCode, 'zh');
+    expect(AppInfoHelper.instance.languageCode3, 'zho');
+    expect(AppInfoHelper.instance.countryCode, 'CN');
+    expect(AppInfoHelper.instance.countryCode3, 'CHN');
   });
 
   test('locale getters use documented fallbacks', () {
-    expect(AppInfoHelper().languageCode, isNotEmpty);
-    expect(AppInfoHelper().languageCode3, isNotEmpty);
-    expect(AppInfoHelper().countryCode, isNotEmpty);
-    expect(AppInfoHelper().countryCode3, isNotEmpty);
+    expect(AppInfoHelper.instance.languageCode, isNotEmpty);
+    expect(AppInfoHelper.instance.languageCode3, isNotEmpty);
+    expect(AppInfoHelper.instance.countryCode, isNotEmpty);
+    expect(AppInfoHelper.instance.countryCode3, isNotEmpty);
   });
 }

@@ -3,8 +3,9 @@
 A Flutter plugin that exposes unified app, device, locale, timezone, and
 identifier information on iOS and Android.
 
-The package keeps native values cached in memory after initialization, so most
-values can be read through synchronous getters in the rest of your app.
+The package keeps native values cached in memory and initializes itself on
+first use, so values can be read through synchronous getters in the rest of
+your app.
 
 ## Features
 
@@ -34,20 +35,10 @@ import 'package:app_info_helper/app_info_helper.dart';
 
 ## Usage
 
-Initialize once during app startup:
+Read values from the shared instance:
 
 ```dart
-Future<void> main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  await AppInfoHelper().init();
-  runApp(const MyApp());
-}
-```
-
-Read cached values anywhere after initialization:
-
-```dart
-final info = AppInfoHelper();
+final info = AppInfoHelper.instance;
 
 final appName = info.appName;
 final packageName = info.packageName;
@@ -58,16 +49,38 @@ final timeZone = info.timeZone;
 final deviceId = info.deviceId;
 ```
 
-`AppInfoHelper()` is a singleton factory. Instances created in different places
-share the same cached native data.
+If native values have not been loaded yet, the first getter read starts loading
+them automatically and returns the documented fallback value for that read.
+Later reads return the cached native values.
+
+`AppInfoHelper.instance` is the recommended entry point. `AppInfoHelper()` is
+kept as a singleton factory for compatibility.
+
+You may also initialize explicitly during app startup when you want to preload
+native values:
+
+```dart
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await AppInfoHelper.instance.init();
+  runApp(const MyApp());
+}
+```
+
+If you must guarantee that native values are loaded before a local read, use:
+
+```dart
+final info = await AppInfoHelper.instance.ready;
+final model = info.deviceModel;
+```
 
 ## Refreshing Values
 
 ```dart
-await AppInfoHelper().refresh();
-await AppInfoHelper().refreshAdvertisingId();
-await AppInfoHelper().refreshDeviceId();
-await AppInfoHelper().resetLocalUuid();
+await AppInfoHelper.instance.refresh();
+await AppInfoHelper.instance.refreshAdvertisingId();
+await AppInfoHelper.instance.refreshDeviceId();
+await AppInfoHelper.instance.resetLocalUuid();
 ```
 
 The plugin also refreshes cached values when the app returns to the foreground.
@@ -80,7 +93,7 @@ has already been granted.
 To request ATT authorization:
 
 ```dart
-final result = await AppInfoHelper().requestIdfaAuthorization();
+final result = await AppInfoHelper.instance.requestIdfaAuthorization();
 
 if (result.isSuccess) {
   final idfa = result.idfa;
