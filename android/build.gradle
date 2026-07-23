@@ -1,0 +1,35 @@
+group 'com.hearbaby.app_info_helper'
+version '0.1.0'
+
+buildscript {
+    ext.kotlin_version = '2.2.20'
+    repositories { google(); mavenCentral() }
+    dependencies {
+        classpath 'com.android.tools.build:gradle:8.11.1'
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+    }
+}
+
+apply plugin: 'com.android.library'
+apply plugin: 'kotlin-android'
+
+android {
+    namespace 'com.hearbaby.app_info_helper'
+    compileSdk 35
+    defaultConfig { minSdk 23 }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    kotlinOptions {
+        jvmTarget = '17'
+    }
+}
+
+dependencies {
+    implementation 'com.google.android.gms:play-services-ads-identifier:18.2.0'
+    implementation 'com.google.android.gms:play-services-appset:16.1.0'
+    implementation 'com.google.android.gms:play-services-tasks:18.2.0'
+}

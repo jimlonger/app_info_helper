@@ -1,0 +1,9 @@
+.dart_tool/
+.packages
+build/
+pubspec.lock
+
+android/.gradle/
+android/build/
+ios/**/Pods/
+ios/**/.build/

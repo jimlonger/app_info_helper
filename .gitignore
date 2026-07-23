@@ -1,0 +1,11 @@
+.dart_tool/
+.packages
+build/
+pubspec.lock
+.idea/
+
+android/.gradle/
+android/build/
+ios/**/*.xcworkspace/
+ios/**/Pods/
+ios/**/.build/

@@ -1,0 +1,18 @@
+name: app_info_helper_example
+description: Demonstrates how to use the app_info_helper plugin.
+publish_to: none
+
+environment:
+  sdk: '>=3.3.0 <4.0.0'
+
+dependencies:
+  app_info_helper:
+    path: ../
+  flutter:
+    sdk: flutter
+
+dev_dependencies:
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
