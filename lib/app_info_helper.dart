@@ -26,7 +26,7 @@ class AppInfoHelper with WidgetsBindingObserver {
   static AppInfoHelper get instance => _instance;
 
   Map<String, dynamic> _data = <String, dynamic>{};
-  Future<void>? _initializing;
+  Future<bool>? _initializing;
   bool _observing = false;
 
   bool get isInitialized => _initializing == null && _data.isNotEmpty;
@@ -38,11 +38,15 @@ class AppInfoHelper with WidgetsBindingObserver {
   }
 
   /// Fetches all values once. Concurrent calls share the same native request.
-  Future<void> init() => _initializing ??= _loadSafely().whenComplete(() {
+  ///
+  /// Returns `true` when native data was loaded successfully, and `false` when
+  /// initialization failed or returned no values. Failures are kept internal so
+  /// app startup does not crash.
+  Future<bool> init() => _initializing ??= _loadSafely().whenComplete(() {
         _initializing = null;
       });
 
-  Future<void> refresh() => _loadSafely();
+  Future<bool> refresh() => _loadSafely();
 
   Future<void> refreshAdvertisingId() async {
     await _ensureInitialized();
@@ -77,20 +81,26 @@ class AppInfoHelper with WidgetsBindingObserver {
     return result;
   }
 
-  Future<void> _load() async {
-    _merge(await _call('getAll'));
+  Future<bool> _load() async {
+    final values = await _call('getAll');
+    if (values.isEmpty) {
+      return false;
+    }
+    _merge(values);
     if (!_observing) {
       WidgetsBinding.instance.addObserver(this);
       _observing = true;
     }
+    return true;
   }
 
-  Future<void> _loadSafely() async {
+  Future<bool> _loadSafely() async {
     try {
-      await _load();
+      return _load();
     } catch (_) {
       // Keep initialization failures internal so callers never need startup
       // crash handling for this helper.
+      return false;
     }
   }
 

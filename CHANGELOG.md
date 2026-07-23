@@ -1,8 +1,14 @@
+## 0.1.3
+
+- Changed `init()` to return `true` when native values load successfully and `false` when unavailable.
+- Changed `refresh()` to return whether the full native data refresh succeeded.
+- Documented non-throwing initialization failure handling.
+
 ## 0.1.2
 
-- Added a complete Chinese usage guide in `docs/USAGE.md`.
+- Added a complete Chinese usage guide in `doc/USAGE.md`.
 - Linked the extended usage guide from the README.
-- Updated installation examples to reference `^0.1.2`.
+- Updated installation examples to reference `^0.1.3`.
 
 ## 0.1.1
 

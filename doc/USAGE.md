@@ -12,7 +12,7 @@ AppInfoHelper.instance
 
 ```yaml
 dependencies:
-  app_info_helper: ^0.1.2
+  app_info_helper: ^0.1.3
 ```
 
 导入：
@@ -45,13 +45,23 @@ final timeZone = AppInfoHelper.instance.timeZone;
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  await AppInfoHelper.instance.init();
+  final initialized = await AppInfoHelper.instance.init();
+  if (!initialized) {
+    // 原生信息暂时不可用，getter 仍会返回默认值。
+  }
 
   runApp(const MyApp());
 }
 ```
 
 `init()` 成功执行一次后，数据会缓存在内存中，后续读取 getter 不会重复请求原生数据。
+
+`init()` 返回 `bool`：
+
+- `true`：原生数据加载成功
+- `false`：原生数据不可用、返回空数据或读取失败
+
+原生 channel 调用失败时，`init()` 不会向外抛异常。
 
 如果多个地方同时调用 `init()`，内部会复用同一个初始化 Future，不会重复发起多次原生请求。
 
@@ -73,7 +83,7 @@ final appName = info.appName;
 手动刷新全部信息：
 
 ```dart
-await AppInfoHelper.instance.refresh();
+final refreshed = await AppInfoHelper.instance.refresh();
 ```
 
 刷新广告标识符：

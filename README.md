@@ -24,7 +24,7 @@ your app.
 
 ```yaml
 dependencies:
-  app_info_helper: ^0.1.2
+  app_info_helper: ^0.1.3
 ```
 
 Then import the package:
@@ -65,10 +65,16 @@ native values:
 ```dart
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await AppInfoHelper.instance.init();
+  final initialized = await AppInfoHelper.instance.init();
+  if (!initialized) {
+    // Native values are unavailable. Getters still return documented fallbacks.
+  }
   runApp(const MyApp());
 }
 ```
+
+`init()` returns `true` when native values were loaded and `false` when they
+were unavailable. It does not throw for channel/native read failures.
 
 If you must guarantee that native values are loaded before a local read, use:
 
@@ -80,7 +86,7 @@ final model = info.deviceModel;
 ## Refreshing Values
 
 ```dart
-await AppInfoHelper.instance.refresh();
+final refreshed = await AppInfoHelper.instance.refresh();
 await AppInfoHelper.instance.refreshAdvertisingId();
 await AppInfoHelper.instance.refreshDeviceId();
 await AppInfoHelper.instance.resetLocalUuid();

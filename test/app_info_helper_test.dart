@@ -16,7 +16,8 @@ void main() {
         .setMockMethodCallHandler(channel, null);
   });
 
-  test('refresh loads native values into synchronous getters', () async {
+  test('init returns true and loads native values into synchronous getters',
+      () async {
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(channel, (call) async {
       expect(call.method, 'getAll');
@@ -32,8 +33,9 @@ void main() {
       };
     });
 
-    await AppInfoHelper.instance.refresh();
+    final initialized = await AppInfoHelper.instance.init();
 
+    expect(initialized, isTrue);
     expect(AppInfoHelper.instance.appName, 'Example');
     expect(AppInfoHelper.instance.packageName, 'com.example.app');
     expect(AppInfoHelper.instance.version, '1.2.3');
@@ -42,6 +44,15 @@ void main() {
     expect(AppInfoHelper.instance.languageCode3, 'zho');
     expect(AppInfoHelper.instance.countryCode, 'CN');
     expect(AppInfoHelper.instance.countryCode3, 'CHN');
+  });
+
+  test('init returns false when native values are unavailable', () async {
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(channel, (call) async => <String, Object>{});
+
+    final initialized = await AppInfoHelper.instance.init();
+
+    expect(initialized, isFalse);
   });
 
   test('locale getters use documented fallbacks', () {
