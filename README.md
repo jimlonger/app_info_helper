@@ -24,7 +24,7 @@ your app.
 
 ```yaml
 dependencies:
-  app_info_helper: ^0.1.0
+  app_info_helper: ^0.1.2
 ```
 
 Then import the package:
@@ -34,6 +34,9 @@ import 'package:app_info_helper/app_info_helper.dart';
 ```
 
 ## Usage
+
+For a complete Chinese integration guide, see
+[doc/USAGE.md](doc/USAGE.md).
 
 Read values from the shared instance:
 

@@ -1,6 +1,6 @@
 name: app_info_helper
 description: Unified native app, device, locale, timezone, and identifier information for Flutter apps on iOS and Android.
-version: 0.1.1
+version: 0.1.2
 homepage: https://github.com/jimlonger/app_info_helper
 repository: https://github.com/jimlonger/app_info_helper
 issue_tracker: https://github.com/jimlonger/app_info_helper/issues

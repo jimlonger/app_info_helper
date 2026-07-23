@@ -1,3 +1,9 @@
+## 0.1.2
+
+- Added a complete Chinese usage guide in `docs/USAGE.md`.
+- Linked the extended usage guide from the README.
+- Updated installation examples to reference `^0.1.2`.
+
 ## 0.1.1
 
 - Added `AppInfoHelper.instance` as the recommended singleton entry point.
