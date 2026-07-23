@@ -6,6 +6,8 @@ pubspec.lock
 
 android/.gradle/
 android/build/
+example/.flutter-plugins-dependencies
 ios/**/*.xcworkspace/
 ios/**/Pods/
 ios/**/.build/
+ios/**/.swiftpm/
