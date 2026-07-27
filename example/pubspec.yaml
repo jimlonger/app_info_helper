@@ -1,12 +1,12 @@
-name: app_info_helper_example
-description: Demonstrates how to use the app_info_helper plugin.
+name: app_info_utils_example
+description: Demonstrates how to use the app_info_utils plugin.
 publish_to: none
 
 environment:
   sdk: '>=3.3.0 <4.0.0'
 
 dependencies:
-  app_info_helper:
+  app_info_utils:
     path: ../
   flutter:
     sdk: flutter

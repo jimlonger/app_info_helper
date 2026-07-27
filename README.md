@@ -1,4 +1,4 @@
-# app_info_helper
+# app_info_utils
 
 A Flutter plugin that exposes unified app, device, locale, timezone, and
 identifier information on iOS and Android.
@@ -25,13 +25,13 @@ your app.
 
 ```yaml
 dependencies:
-  app_info_helper: ^0.1.4
+  app_info_utils: ^0.1.4
 ```
 
 Then import the package:
 
 ```dart
-import 'package:app_info_helper/app_info_helper.dart';
+import 'package:app_info_utils/app_info_utils.dart';
 ```
 
 ## Usage
@@ -42,7 +42,7 @@ For a complete Chinese integration guide, see
 Read values from the shared instance:
 
 ```dart
-final info = AppInfoHelper.instance;
+final info = AppInfoUtils.instance;
 
 final appName = info.appName;
 final packageName = info.packageName;
@@ -59,7 +59,7 @@ If native values have not been loaded yet, the first getter read starts loading
 them automatically and returns the documented fallback value for that read.
 Later reads return the cached native values.
 
-`AppInfoHelper.instance` is the recommended entry point. `AppInfoHelper()` is
+`AppInfoUtils.instance` is the recommended entry point. `AppInfoUtils()` is
 kept as a singleton factory for compatibility.
 
 You may also initialize explicitly during app startup when you want to preload
@@ -68,7 +68,7 @@ native values:
 ```dart
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  final initialized = await AppInfoHelper.instance.init();
+  final initialized = await AppInfoUtils.instance.init();
   if (!initialized) {
     // Some native values or secure local ID persistence are unavailable.
     // primaryLocalId and secondaryLocalId still have in-memory UUID fallbacks.
@@ -83,17 +83,17 @@ were unavailable. It does not throw for channel/native read failures.
 If you must guarantee that native values are loaded before a local read, use:
 
 ```dart
-final info = await AppInfoHelper.instance.ready;
+final info = await AppInfoUtils.instance.ready;
 final model = info.deviceModel;
 ```
 
 ## Refreshing Values
 
 ```dart
-final refreshed = await AppInfoHelper.instance.refresh();
-await AppInfoHelper.instance.refreshAdvertisingId();
-await AppInfoHelper.instance.refreshDeviceId();
-await AppInfoHelper.instance.resetLocalId();
+final refreshed = await AppInfoUtils.instance.refresh();
+await AppInfoUtils.instance.refreshAdvertisingId();
+await AppInfoUtils.instance.refreshDeviceId();
+await AppInfoUtils.instance.resetLocalId();
 ```
 
 The plugin also refreshes cached values when the app returns to the foreground.
@@ -111,7 +111,7 @@ namespace; when both namespaces are available on the same platform, values are
 synchronized so future reads stay consistent.
 
 ```dart
-await AppInfoHelper.instance.init(
+await AppInfoUtils.instance.init(
   localIdStorageOptions: const LocalIdStorageOptions(
     fallbackNamespace: 'my_app',
   ),
@@ -121,15 +121,15 @@ await AppInfoHelper.instance.init(
 Manage either local ID through a single slot-based API:
 
 ```dart
-final primary = await AppInfoHelper.instance.readLocalId();
-final secondary = await AppInfoHelper.instance.readLocalId(
+final primary = await AppInfoUtils.instance.readLocalId();
+final secondary = await AppInfoUtils.instance.readLocalId(
   slot: LocalIdSlot.secondary,
 );
 
-await AppInfoHelper.instance.writeLocalId('custom-id');
-final exists = await AppInfoHelper.instance.containsLocalId();
-await AppInfoHelper.instance.deleteLocalId();
-final newPrimary = await AppInfoHelper.instance.resetLocalId();
+await AppInfoUtils.instance.writeLocalId('custom-id');
+final exists = await AppInfoUtils.instance.containsLocalId();
+await AppInfoUtils.instance.deleteLocalId();
+final newPrimary = await AppInfoUtils.instance.resetLocalId();
 ```
 
 ## iOS IDFA and ATT
@@ -140,7 +140,7 @@ has already been granted.
 To request ATT authorization:
 
 ```dart
-final result = await AppInfoHelper.instance.requestIdfaAuthorization();
+final result = await AppInfoUtils.instance.requestIdfaAuthorization();
 
 if (result.isSuccess) {
   final idfa = result.idfa;

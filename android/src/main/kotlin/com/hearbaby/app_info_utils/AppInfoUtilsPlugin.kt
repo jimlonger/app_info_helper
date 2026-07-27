@@ -1,4 +1,4 @@
-package com.hearbaby.app_info_helper
+package com.hearbaby.app_info_utils
 
 import android.app.ActivityManager
 import android.content.Context
@@ -30,7 +30,7 @@ import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
 import javax.crypto.spec.GCMParameterSpec
 
-class AppInfoHelperPlugin : FlutterPlugin, MethodChannel.MethodCallHandler {
+class AppInfoUtilsPlugin : FlutterPlugin, MethodChannel.MethodCallHandler {
   private lateinit var context: Context
   private lateinit var channel: MethodChannel
   private val executor = Executors.newSingleThreadExecutor()
@@ -38,7 +38,7 @@ class AppInfoHelperPlugin : FlutterPlugin, MethodChannel.MethodCallHandler {
 
   override fun onAttachedToEngine(binding: FlutterPlugin.FlutterPluginBinding) {
     context = binding.applicationContext
-    channel = MethodChannel(binding.binaryMessenger, "app_info_helper")
+    channel = MethodChannel(binding.binaryMessenger, "app_info_utils")
     channel.setMethodCallHandler(this)
   }
 
@@ -172,10 +172,10 @@ private data class LocalIdResult(
 }
 
 private class SecureLocalIdStorage(private val context: Context) {
-  private val dataPrefs = context.getSharedPreferences("app_info_helper_secure_local_ids", Context.MODE_PRIVATE)
-  private val configPrefs = context.getSharedPreferences("app_info_helper_secure_local_ids_config", Context.MODE_PRIVATE)
-  private val keyAlias = "app_info_helper_secure_local_ids_rsa"
-  private val aesKeyName = "app_info_helper_secure_local_ids_aes_key"
+  private val dataPrefs = context.getSharedPreferences("app_info_utils_secure_local_ids", Context.MODE_PRIVATE)
+  private val configPrefs = context.getSharedPreferences("app_info_utils_secure_local_ids_config", Context.MODE_PRIVATE)
+  private val keyAlias = "app_info_utils_secure_local_ids_rsa"
+  private val aesKeyName = "app_info_utils_secure_local_ids_aes_key"
   private val keyStore = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
 
   fun read(slot: LocalIdSlot, options: LocalIdOptions): LocalIdResult {
@@ -248,7 +248,7 @@ private class SecureLocalIdStorage(private val context: Context) {
     val explicit = if (slot == LocalIdSlot.PRIMARY) options.primaryKey else options.secondaryKey
     if (!explicit.isNullOrEmpty()) return listOf(explicit)
     val suffix = if (slot == LocalIdSlot.PRIMARY) "primaryLocalId" else "secondaryLocalId"
-    return listOfNotNull(context.packageName.takeIf { it.isNotEmpty() }, options.fallbackNamespace?.takeIf { it.isNotEmpty() }, "app_info_helper")
+    return listOfNotNull(context.packageName.takeIf { it.isNotEmpty() }, options.fallbackNamespace?.takeIf { it.isNotEmpty() }, "app_info_utils")
       .distinct()
       .map { "$it.$suffix" }
   }

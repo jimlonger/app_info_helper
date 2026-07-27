@@ -1,4 +1,4 @@
-group 'com.hearbaby.app_info_helper'
+group 'com.hearbaby.app_info_utils'
 version '0.1.0'
 
 buildscript {
@@ -14,7 +14,7 @@ apply plugin: 'com.android.library'
 apply plugin: 'kotlin-android'
 
 android {
-    namespace 'com.hearbaby.app_info_helper'
+    namespace 'com.hearbaby.app_info_utils'
     compileSdk 35
     defaultConfig { minSdk 23 }
 

@@ -1,14 +1,14 @@
-import 'package:app_info_helper/app_info_helper.dart';
+import 'package:app_info_utils/app_info_utils.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  const channel = MethodChannel('app_info_helper');
+  const channel = MethodChannel('app_info_utils');
 
   test('instance is the shared singleton entry point', () {
-    expect(identical(AppInfoHelper.instance, AppInfoHelper()), isTrue);
+    expect(identical(AppInfoUtils.instance, AppInfoUtils()), isTrue);
   });
 
   tearDown(() {
@@ -36,30 +36,30 @@ void main() {
       };
     });
 
-    final initialized = await AppInfoHelper.instance.init();
+    final initialized = await AppInfoUtils.instance.init();
 
     expect(initialized, isTrue);
-    expect(AppInfoHelper.instance.appName, 'Example');
-    expect(AppInfoHelper.instance.packageName, 'com.example.app');
-    expect(AppInfoHelper.instance.version, '1.2.3');
-    expect(AppInfoHelper.instance.deviceModel, 'Pixel');
-    expect(AppInfoHelper.instance.languageCode, 'zh');
-    expect(AppInfoHelper.instance.languageCode3, 'zho');
-    expect(AppInfoHelper.instance.countryCode, 'CN');
-    expect(AppInfoHelper.instance.countryCode3, 'CHN');
-    expect(AppInfoHelper.instance.primaryLocalId, 'primary-id');
-    expect(AppInfoHelper.instance.secondaryLocalId, 'secondary-id');
+    expect(AppInfoUtils.instance.appName, 'Example');
+    expect(AppInfoUtils.instance.packageName, 'com.example.app');
+    expect(AppInfoUtils.instance.version, '1.2.3');
+    expect(AppInfoUtils.instance.deviceModel, 'Pixel');
+    expect(AppInfoUtils.instance.languageCode, 'zh');
+    expect(AppInfoUtils.instance.languageCode3, 'zho');
+    expect(AppInfoUtils.instance.countryCode, 'CN');
+    expect(AppInfoUtils.instance.countryCode3, 'CHN');
+    expect(AppInfoUtils.instance.primaryLocalId, 'primary-id');
+    expect(AppInfoUtils.instance.secondaryLocalId, 'secondary-id');
   });
 
   test('init returns false when native values are unavailable', () async {
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(channel, (call) async => <String, Object>{});
 
-    final initialized = await AppInfoHelper.instance.init();
+    final initialized = await AppInfoUtils.instance.init();
 
     expect(initialized, isFalse);
-    expect(AppInfoHelper.instance.primaryLocalId, isNotEmpty);
-    expect(AppInfoHelper.instance.secondaryLocalId, isNotEmpty);
+    expect(AppInfoUtils.instance.primaryLocalId, isNotEmpty);
+    expect(AppInfoUtils.instance.secondaryLocalId, isNotEmpty);
   });
 
   test('local id methods pass slot and configured storage options', () async {
@@ -84,12 +84,12 @@ void main() {
       return <String, Object>{};
     });
 
-    await AppInfoHelper.instance.init(
+    await AppInfoUtils.instance.init(
       localIdStorageOptions: const LocalIdStorageOptions(
         fallbackNamespace: 'fallback',
       ),
     );
-    final value = await AppInfoHelper.instance.readLocalId(
+    final value = await AppInfoUtils.instance.readLocalId(
       slot: LocalIdSlot.secondary,
     );
 
@@ -103,9 +103,9 @@ void main() {
   });
 
   test('locale getters use documented fallbacks', () {
-    expect(AppInfoHelper.instance.languageCode, isNotEmpty);
-    expect(AppInfoHelper.instance.languageCode3, isNotEmpty);
-    expect(AppInfoHelper.instance.countryCode, isNotEmpty);
-    expect(AppInfoHelper.instance.countryCode3, isNotEmpty);
+    expect(AppInfoUtils.instance.languageCode, isNotEmpty);
+    expect(AppInfoUtils.instance.languageCode3, isNotEmpty);
+    expect(AppInfoUtils.instance.countryCode, isNotEmpty);
+    expect(AppInfoUtils.instance.countryCode3, isNotEmpty);
   });
 }

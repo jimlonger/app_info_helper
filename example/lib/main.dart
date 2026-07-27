@@ -1,9 +1,9 @@
-import 'package:app_info_helper/app_info_helper.dart';
+import 'package:app_info_utils/app_info_utils.dart';
 import 'package:flutter/material.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await AppInfoHelper().init();
+  await AppInfoUtils().init();
   runApp(const ExampleApp());
 }
 
@@ -12,7 +12,7 @@ class ExampleApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final info = AppInfoHelper();
+    final info = AppInfoUtils();
     final rows = <String, String>{
       'App name': info.appName,
       'Package': info.packageName,
@@ -32,7 +32,7 @@ class ExampleApp extends StatelessWidget {
 
     return MaterialApp(
       home: Scaffold(
-        appBar: AppBar(title: const Text('app_info_helper')),
+        appBar: AppBar(title: const Text('app_info_utils')),
         body: ListView(
           padding: const EdgeInsets.all(16),
           children: rows.entries

@@ -12,11 +12,11 @@ import 'package:flutter/widgets.dart';
 /// later getters/functions will retry initialization automatically.
 /// All string getters are never null: unavailable values are returned as an
 /// empty string or their documented fallback.
-class AppInfoHelper with WidgetsBindingObserver {
-  factory AppInfoHelper() => _instance;
-  AppInfoHelper._();
-  static final AppInfoHelper _instance = AppInfoHelper._();
-  static const MethodChannel _channel = MethodChannel('app_info_helper');
+class AppInfoUtils with WidgetsBindingObserver {
+  factory AppInfoUtils() => _instance;
+  AppInfoUtils._();
+  static final AppInfoUtils _instance = AppInfoUtils._();
+  static const MethodChannel _channel = MethodChannel('app_info_utils');
 
   /// Shared singleton instance.
   ///
@@ -24,7 +24,7 @@ class AppInfoHelper with WidgetsBindingObserver {
   /// first read may still return the documented fallback value while native
   /// values are loading; await [init] or [ready] when the actual value is
   /// required immediately.
-  static AppInfoHelper get instance => _instance;
+  static AppInfoUtils get instance => _instance;
 
   Map<String, dynamic> _data = <String, dynamic>{};
   Future<bool>? _initializing;
@@ -35,7 +35,7 @@ class AppInfoHelper with WidgetsBindingObserver {
   bool get isInitialized => _initializing == null && _loadedNativeValues;
 
   /// Ensures native values have been loaded, then returns [instance].
-  Future<AppInfoHelper> get ready async {
+  Future<AppInfoUtils> get ready async {
     await init();
     return this;
   }

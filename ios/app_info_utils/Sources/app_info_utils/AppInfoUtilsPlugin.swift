@@ -5,12 +5,12 @@ import Security
 import UIKit
 import MachO
 
-public final class AppInfoHelperPlugin: NSObject, FlutterPlugin {
+public final class AppInfoUtilsPlugin: NSObject, FlutterPlugin {
   private let localIds = SecureLocalIdStorage()
 
   public static func register(with registrar: FlutterPluginRegistrar) {
-    let channel = FlutterMethodChannel(name: "app_info_helper", binaryMessenger: registrar.messenger())
-    registrar.addMethodCallDelegate(AppInfoHelperPlugin(), channel: channel)
+    let channel = FlutterMethodChannel(name: "app_info_utils", binaryMessenger: registrar.messenger())
+    registrar.addMethodCallDelegate(AppInfoUtilsPlugin(), channel: channel)
   }
 
   public func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
@@ -204,7 +204,7 @@ private final class SecureLocalIdStorage {
     var namespaces = [String]()
     if let bundleId = Bundle.main.bundleIdentifier, !bundleId.isEmpty { namespaces.append(bundleId) }
     if let fallback = options.fallbackNamespace, !fallback.isEmpty { namespaces.append(fallback) }
-    namespaces.append("app_info_helper")
+    namespaces.append("app_info_utils")
     return Array(NSOrderedSet(array: namespaces).compactMap { $0 as? String }).map { "\($0).\(suffix)" }
   }
   private func query(_ key: String) -> [String: Any] {
@@ -215,7 +215,7 @@ private final class SecureLocalIdStorage {
     ]
   }
   private func service(_ key: String) -> String {
-    key.split(separator: ".").dropLast().joined(separator: ".").isEmpty ? "app_info_helper.local_ids" : key.split(separator: ".").dropLast().joined(separator: ".")
+    key.split(separator: ".").dropLast().joined(separator: ".").isEmpty ? "app_info_utils.local_ids" : key.split(separator: ".").dropLast().joined(separator: ".")
   }
   private func readKey(_ key: String) -> String? {
     var q = query(key)

@@ -1,9 +1,9 @@
-name: app_info_helper
+name: app_info_utils
 description: Unified native app, device, locale, timezone, and identifier information for Flutter apps on iOS and Android.
 version: 0.1.4
-homepage: https://github.com/jimlonger/app_info_helper
-repository: https://github.com/jimlonger/app_info_helper
-issue_tracker: https://github.com/jimlonger/app_info_helper/issues
+homepage: https://github.com/jimlonger/app_info_utils
+repository: https://github.com/jimlonger/app_info_utils
+issue_tracker: https://github.com/jimlonger/app_info_utils/issues
 
 environment:
   sdk: '>=3.3.0 <4.0.0'
@@ -29,7 +29,7 @@ flutter:
   plugin:
     platforms:
       android:
-        package: com.hearbaby.app_info_helper
-        pluginClass: AppInfoHelperPlugin
+        package: com.hearbaby.app_info_utils
+        pluginClass: AppInfoUtilsPlugin
       ios:
-        pluginClass: AppInfoHelperPlugin
+        pluginClass: AppInfoUtilsPlugin

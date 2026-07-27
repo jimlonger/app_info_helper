@@ -1,5 +1,7 @@
 ## 0.1.4
 
+- Renamed the package to `app_info_utils` and the public entry point to
+  `AppInfoUtils`.
 - Replaced the previous local UUID with secure `primaryLocalId` and
   `secondaryLocalId` values.
 - Added slot-based local ID read, write, contains, delete, and reset APIs.
@@ -20,9 +22,9 @@
 
 ## 0.1.1
 
-- Added `AppInfoHelper.instance` as the recommended singleton entry point.
+- Added `AppInfoUtils.instance` as the recommended singleton entry point.
 - Added automatic lazy initialization when synchronous getters are first read.
-- Added `AppInfoHelper.instance.ready` for callers that need to await loaded native values.
+- Added `AppInfoUtils.instance.ready` for callers that need to await loaded native values.
 - Updated usage documentation while keeping explicit `init()` support.
 
 ## 0.1.0
