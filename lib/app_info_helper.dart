@@ -1,6 +1,7 @@
 library;
 
 import 'dart:async';
+import 'dart:math';
 
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
@@ -27,9 +28,11 @@ class AppInfoHelper with WidgetsBindingObserver {
 
   Map<String, dynamic> _data = <String, dynamic>{};
   Future<bool>? _initializing;
+  LocalIdStorageOptions _localIdStorageOptions = const LocalIdStorageOptions();
+  bool _loadedNativeValues = false;
   bool _observing = false;
 
-  bool get isInitialized => _initializing == null && _data.isNotEmpty;
+  bool get isInitialized => _initializing == null && _loadedNativeValues;
 
   /// Ensures native values have been loaded, then returns [instance].
   Future<AppInfoHelper> get ready async {
@@ -42,11 +45,28 @@ class AppInfoHelper with WidgetsBindingObserver {
   /// Returns `true` when native data was loaded successfully, and `false` when
   /// initialization failed or returned no values. Failures are kept internal so
   /// app startup does not crash.
-  Future<bool> init() => _initializing ??= _loadSafely().whenComplete(() {
-        _initializing = null;
-      });
+  Future<bool> init({
+    LocalIdStorageOptions localIdStorageOptions = const LocalIdStorageOptions(),
+  }) {
+    _validateLocalIdStorageOptions(localIdStorageOptions);
+    _localIdStorageOptions = localIdStorageOptions;
+    return _initializing ??= _loadSafely().whenComplete(() {
+      _initializing = null;
+    });
+  }
 
   Future<bool> refresh() => _loadSafely();
+
+  Future<void> configureLocalIds(LocalIdStorageOptions options) async {
+    _validateLocalIdStorageOptions(options);
+    _localIdStorageOptions = options;
+    _data = <String, dynamic>{..._data}
+      ..remove('primaryLocalId')
+      ..remove('secondaryLocalId')
+      ..remove('localIdsPersisted');
+    _merge(await _call('readAllLocalIds'));
+    _ensureLocalIdsInMemory();
+  }
 
   Future<void> refreshAdvertisingId() async {
     await _ensureInitialized();
@@ -58,9 +78,84 @@ class AppInfoHelper with WidgetsBindingObserver {
     _merge(await _call('refreshDeviceId'));
   }
 
-  Future<void> resetLocalUuid() async {
+  Future<String> readLocalId({
+    LocalIdSlot slot = LocalIdSlot.primary,
+  }) async {
     await _ensureInitialized();
-    _merge(await _call('resetLocalUuid'));
+    _merge(
+        await _call('readLocalId', <String, dynamic>{'slot': slot.wireName}));
+    _ensureLocalIdsInMemory();
+    return _s(_localIdDataKey(slot));
+  }
+
+  Future<void> writeLocalId(
+    String value, {
+    LocalIdSlot slot = LocalIdSlot.primary,
+  }) async {
+    if (value.isEmpty) {
+      throw ArgumentError.value(value, 'value', 'Local ID cannot be empty.');
+    }
+    await _ensureInitialized();
+    _merge(await _call('writeLocalId', <String, dynamic>{
+      'slot': slot.wireName,
+      'value': value,
+    }));
+    _data = <String, dynamic>{..._data, _localIdDataKey(slot): value};
+  }
+
+  Future<void> deleteLocalId({
+    LocalIdSlot slot = LocalIdSlot.primary,
+  }) async {
+    await _ensureInitialized();
+    await _call('deleteLocalId', <String, dynamic>{'slot': slot.wireName});
+    _data = <String, dynamic>{..._data}..remove(_localIdDataKey(slot));
+  }
+
+  Future<bool> containsLocalId({
+    LocalIdSlot slot = LocalIdSlot.primary,
+  }) async {
+    await _ensureInitialized();
+    final values = await _call(
+        'containsLocalId', <String, dynamic>{'slot': slot.wireName});
+    return values['containsKey'] == true;
+  }
+
+  Future<String> resetLocalId({
+    LocalIdSlot slot = LocalIdSlot.primary,
+  }) async {
+    await _ensureInitialized();
+    _merge(
+        await _call('resetLocalId', <String, dynamic>{'slot': slot.wireName}));
+    _ensureLocalIdsInMemory();
+    return _s(_localIdDataKey(slot));
+  }
+
+  Future<Map<LocalIdSlot, String>> readAllLocalIds() async {
+    await _ensureInitialized();
+    _merge(await _call('readAllLocalIds'));
+    _ensureLocalIdsInMemory();
+    return <LocalIdSlot, String>{
+      LocalIdSlot.primary: primaryLocalId,
+      LocalIdSlot.secondary: secondaryLocalId,
+    };
+  }
+
+  Future<void> deleteAllLocalIds() async {
+    await _ensureInitialized();
+    await _call('deleteAllLocalIds');
+    _data = <String, dynamic>{..._data}
+      ..remove('primaryLocalId')
+      ..remove('secondaryLocalId');
+  }
+
+  Future<Map<LocalIdSlot, String>> resetAllLocalIds() async {
+    await _ensureInitialized();
+    _merge(await _call('resetAllLocalIds'));
+    _ensureLocalIdsInMemory();
+    return <LocalIdSlot, String>{
+      LocalIdSlot.primary: primaryLocalId,
+      LocalIdSlot.secondary: secondaryLocalId,
+    };
   }
 
   /// Requests iOS ATT. Android returns an `unavailable` failure result.
@@ -84,14 +179,17 @@ class AppInfoHelper with WidgetsBindingObserver {
   Future<bool> _load() async {
     final values = await _call('getAll');
     if (values.isEmpty) {
+      _ensureLocalIdsInMemory();
       return false;
     }
     _merge(values);
+    _ensureLocalIdsInMemory();
+    _loadedNativeValues = true;
     if (!_observing) {
       WidgetsBinding.instance.addObserver(this);
       _observing = true;
     }
-    return true;
+    return _data['localIdsPersisted'] != false;
   }
 
   Future<bool> _loadSafely() async {
@@ -100,6 +198,7 @@ class AppInfoHelper with WidgetsBindingObserver {
     } catch (_) {
       // Keep initialization failures internal so callers never need startup
       // crash handling for this helper.
+      _ensureLocalIdsInMemory();
       return false;
     }
   }
@@ -123,9 +222,18 @@ class AppInfoHelper with WidgetsBindingObserver {
     }
   }
 
-  Future<Map<String, dynamic>> _call(String method) async {
+  Future<Map<String, dynamic>> _call(
+    String method, [
+    Map<String, dynamic> arguments = const <String, dynamic>{},
+  ]) async {
     try {
-      return (await _channel.invokeMapMethod<String, dynamic>(method)) ??
+      return (await _channel.invokeMapMethod<String, dynamic>(
+            method,
+            <String, dynamic>{
+              ...arguments,
+              'localIdStorageOptions': _localIdStorageOptions.toMap(),
+            },
+          )) ??
           <String, dynamic>{};
     } catch (_) {
       return <String, dynamic>{};
@@ -134,6 +242,73 @@ class AppInfoHelper with WidgetsBindingObserver {
 
   void _merge(Map<String, dynamic> value) =>
       _data = <String, dynamic>{..._data, ...value};
+
+  void _ensureLocalIdsInMemory() {
+    final data = <String, dynamic>{..._data};
+    if ((data['primaryLocalId']?.toString() ?? '').isEmpty) {
+      data['primaryLocalId'] = _uuidV4();
+      data['localIdsPersisted'] = false;
+    }
+    if ((data['secondaryLocalId']?.toString() ?? '').isEmpty) {
+      data['secondaryLocalId'] = _uuidV4();
+      data['localIdsPersisted'] = false;
+    }
+    _data = data;
+  }
+
+  String _localIdDataKey(LocalIdSlot slot) => switch (slot) {
+        LocalIdSlot.primary => 'primaryLocalId',
+        LocalIdSlot.secondary => 'secondaryLocalId',
+      };
+
+  String _uuidV4() {
+    final random = Random.secure();
+    final bytes = List<int>.generate(16, (_) => random.nextInt(256));
+    bytes[6] = (bytes[6] & 0x0f) | 0x40;
+    bytes[8] = (bytes[8] & 0x3f) | 0x80;
+    String hex(int byte) => byte.toRadixString(16).padLeft(2, '0');
+    final value = bytes.map(hex).join();
+    return '${value.substring(0, 8)}-'
+        '${value.substring(8, 12)}-'
+        '${value.substring(12, 16)}-'
+        '${value.substring(16, 20)}-'
+        '${value.substring(20)}';
+  }
+
+  void _validateLocalIdStorageOptions(LocalIdStorageOptions options) {
+    if (options.fallbackNamespace != null &&
+        options.fallbackNamespace!.isEmpty) {
+      throw ArgumentError.value(
+        options.fallbackNamespace,
+        'fallbackNamespace',
+        'Fallback namespace cannot be empty.',
+      );
+    }
+    if (options.primaryKey != null && options.primaryKey!.isEmpty) {
+      throw ArgumentError.value(
+        options.primaryKey,
+        'primaryKey',
+        'Primary local ID key cannot be empty.',
+      );
+    }
+    if (options.secondaryKey != null && options.secondaryKey!.isEmpty) {
+      throw ArgumentError.value(
+        options.secondaryKey,
+        'secondaryKey',
+        'Secondary local ID key cannot be empty.',
+      );
+    }
+    if (options.primaryKey != null &&
+        options.secondaryKey != null &&
+        options.primaryKey == options.secondaryKey) {
+      throw ArgumentError.value(
+        options.primaryKey,
+        'primaryKey',
+        'Primary and secondary local ID keys must be different.',
+      );
+    }
+  }
+
   String _s(String key, [String fallback = '']) {
     _ensureInitializedSoon();
     return _data[key]?.toString() ?? fallback;
@@ -217,7 +392,8 @@ class AppInfoHelper with WidgetsBindingObserver {
   String get oaid => _s('oaid');
   String get asid => _s('asid');
   String get idfv => _s('idfv');
-  String get localUuid => _s('localUuid');
+  String get primaryLocalId => _s('primaryLocalId');
+  String get secondaryLocalId => _s('secondaryLocalId');
 
   // AndroidDeviceInfo-only fields.
   String get androidBoard => _s('androidBoard');
@@ -255,6 +431,36 @@ class AppInfoHelper with WidgetsBindingObserver {
   String get iosUtsnameRelease => _s('iosUtsnameRelease');
   String get iosUtsnameVersion => _s('iosUtsnameVersion');
   String get iosUtsnameMachine => _s('iosUtsnameMachine');
+}
+
+enum LocalIdSlot {
+  primary,
+  secondary;
+
+  String get wireName => switch (this) {
+        primary => 'primary',
+        secondary => 'secondary',
+      };
+}
+
+class LocalIdStorageOptions {
+  const LocalIdStorageOptions({
+    this.fallbackNamespace,
+    this.primaryKey,
+    this.secondaryKey,
+  });
+
+  /// Used only when Android cannot read packageName or iOS cannot read
+  /// bundleIdentifier. It is a storage namespace, not an encryption key.
+  final String? fallbackNamespace;
+  final String? primaryKey;
+  final String? secondaryKey;
+
+  Map<String, dynamic> toMap() => <String, dynamic>{
+        if (fallbackNamespace != null) 'fallbackNamespace': fallbackNamespace,
+        if (primaryKey != null) 'primaryKey': primaryKey,
+        if (secondaryKey != null) 'secondaryKey': secondaryKey,
+      };
 }
 
 class IdfaAuthorizationResult {

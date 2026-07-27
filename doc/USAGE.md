@@ -12,7 +12,7 @@ AppInfoHelper.instance
 
 ```yaml
 dependencies:
-  app_info_helper: ^0.1.3
+  app_info_helper: ^0.1.4
 ```
 
 导入：
@@ -98,13 +98,49 @@ await AppInfoHelper.instance.refreshAdvertisingId();
 await AppInfoHelper.instance.refreshDeviceId();
 ```
 
-重置本地 UUID：
+重置主本地安全 ID：
 
 ```dart
-await AppInfoHelper.instance.resetLocalUuid();
+await AppInfoHelper.instance.resetLocalId();
 ```
 
 插件在完成初始化后会监听 App 生命周期。当 App 回到前台时，会自动静默刷新一次原生信息。
+
+## 本地安全 ID
+
+插件提供两个本地安全 ID：
+
+```dart
+AppInfoHelper.instance.primaryLocalId;
+AppInfoHelper.instance.secondaryLocalId;
+```
+
+两个值都由原生 UUID 直接生成。Android 使用 Android KeyStore + RSA OAEP + AES-GCM 加密后保存到专用 SharedPreferences；iOS 使用 Keychain 和 `kSecAttrAccessibleWhenUnlocked` 保存。Android 和 iOS 会各自独立生成，不要求两个平台的值一致。
+
+默认存储 namespace 会优先使用 Android `context.packageName` 或 iOS `Bundle.main.bundleIdentifier`。如果原生 namespace 暂时不可用，可以传入兜底 namespace；同一平台内如果后续两个 namespace 都可用，会把同一个值同步到所有候选 key，避免切换 key 后读到不同 ID。
+
+```dart
+await AppInfoHelper.instance.init(
+  localIdStorageOptions: const LocalIdStorageOptions(
+    fallbackNamespace: 'my_app',
+  ),
+);
+```
+
+统一操作方法通过 `LocalIdSlot` 区分主/副 ID：
+
+```dart
+final primary = await AppInfoHelper.instance.readLocalId();
+final secondary = await AppInfoHelper.instance.readLocalId(
+  slot: LocalIdSlot.secondary,
+);
+
+await AppInfoHelper.instance.writeLocalId('custom-id');
+final exists = await AppInfoHelper.instance.containsLocalId();
+await AppInfoHelper.instance.deleteLocalId();
+final newPrimary = await AppInfoHelper.instance.resetLocalId();
+final all = await AppInfoHelper.instance.resetAllLocalIds();
+```
 
 ## iOS IDFA 和 ATT 授权
 
@@ -185,7 +221,8 @@ AppInfoHelper.instance.idfv;
 AppInfoHelper.instance.gaid;
 AppInfoHelper.instance.androidId;
 AppInfoHelper.instance.asid;
-AppInfoHelper.instance.localUuid;
+AppInfoHelper.instance.primaryLocalId;
+AppInfoHelper.instance.secondaryLocalId;
 ```
 
 ## Android 专属字段

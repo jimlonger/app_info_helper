@@ -1,3 +1,11 @@
+## 0.1.4
+
+- Replaced the previous local UUID with secure `primaryLocalId` and
+  `secondaryLocalId` values.
+- Added slot-based local ID read, write, contains, delete, and reset APIs.
+- Added Android KeyStore + RSA OAEP + AES-GCM storage for local IDs.
+- Added iOS Keychain storage for local IDs.
+
 ## 0.1.3
 
 - Changed `init()` to return `true` when native values load successfully and `false` when unavailable.

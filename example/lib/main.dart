@@ -26,6 +26,8 @@ class ExampleApp extends StatelessWidget {
       'Time zone': info.timeZone,
       'Device ID': info.deviceId,
       'Advertising ID': info.advertisingId,
+      'Primary local ID': info.primaryLocalId,
+      'Secondary local ID': info.secondaryLocalId,
     };
 
     return MaterialApp(

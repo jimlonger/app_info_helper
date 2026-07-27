@@ -7,6 +7,9 @@ import android.os.Build
 import android.os.Environment
 import android.os.StatFs
 import android.provider.Settings
+import android.security.keystore.KeyGenParameterSpec
+import android.security.keystore.KeyProperties
+import android.util.Base64
 import com.google.android.gms.appset.AppSet
 import com.google.android.gms.tasks.Tasks
 import com.google.android.gms.ads.identifier.AdvertisingIdClient
@@ -14,16 +17,24 @@ import io.flutter.embedding.engine.plugins.FlutterPlugin
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import java.io.File
+import java.security.KeyPairGenerator
+import java.security.KeyStore
 import java.security.MessageDigest
 import java.util.Locale
+import java.security.SecureRandom
 import java.util.TimeZone
 import java.util.UUID
 import java.util.concurrent.Executors
+import javax.crypto.Cipher
+import javax.crypto.KeyGenerator
+import javax.crypto.SecretKey
+import javax.crypto.spec.GCMParameterSpec
 
 class AppInfoHelperPlugin : FlutterPlugin, MethodChannel.MethodCallHandler {
   private lateinit var context: Context
   private lateinit var channel: MethodChannel
   private val executor = Executors.newSingleThreadExecutor()
+  private val secureLocalIds by lazy { SecureLocalIdStorage(context) }
 
   override fun onAttachedToEngine(binding: FlutterPlugin.FlutterPluginBinding) {
     context = binding.applicationContext
@@ -39,12 +50,20 @@ class AppInfoHelperPlugin : FlutterPlugin, MethodChannel.MethodCallHandler {
   override fun onMethodCall(call: MethodCall, result: MethodChannel.Result) {
     executor.execute {
       try {
+        val options = localIdOptions(call)
         val values = when (call.method) {
-          "getAll" -> all()
-          "refreshAdvertisingId" -> identifiers(refreshAdvertising = true)
-          "refreshDeviceId" -> identifiers(refreshDevice = true)
-          "resetLocalUuid" -> { prefs().edit().putString("localUuid", UUID.randomUUID().toString()).apply(); identifiers(refreshDevice = true) }
-          "requestIdfaAuthorization" -> failure("unavailable")
+          "getAll" -> all(options)
+          "refreshAdvertisingId" -> identifiers(options, refreshAdvertising = true)
+          "refreshDeviceId" -> identifiers(options, refreshDevice = true)
+          "readLocalId" -> secureLocalIds.read(slot(call), options).toMap()
+          "writeLocalId" -> secureLocalIds.write(slot(call), value(call), options).toMap()
+          "deleteLocalId" -> { secureLocalIds.delete(slot(call), options); mapOf("localIdsPersisted" to true) }
+          "containsLocalId" -> mapOf("containsKey" to secureLocalIds.contains(slot(call), options), "localIdsPersisted" to true)
+          "resetLocalId" -> secureLocalIds.reset(slot(call), options).toMap()
+          "readAllLocalIds" -> secureLocalIds.readAll(options).toMap()
+          "deleteAllLocalIds" -> { secureLocalIds.deleteAll(options); mapOf("localIdsPersisted" to true) }
+          "resetAllLocalIds" -> secureLocalIds.resetAll(options).toMap()
+          "requestIdfaAuthorization" -> failure(options, "unavailable")
           else -> null
         }
         if (values == null) result.notImplemented() else result.success(values)
@@ -52,8 +71,8 @@ class AppInfoHelperPlugin : FlutterPlugin, MethodChannel.MethodCallHandler {
     }
   }
 
-  private fun all(): Map<String, Any> = HashMap<String, Any>().apply {
-    putAll(common()); putAll(android()); putAll(app()); putAll(locale()); putAll(identifiers(true, true))
+  private fun all(options: LocalIdOptions): Map<String, Any> = HashMap<String, Any>().apply {
+    putAll(common()); putAll(android()); putAll(app()); putAll(locale()); putAll(identifiers(options, true, true))
   }
 
   private fun common() = mapOf<String, Any>(
@@ -97,23 +116,181 @@ class AppInfoHelperPlugin : FlutterPlugin, MethodChannel.MethodCallHandler {
       "locale" to l.toLanguageTag().ifEmpty { "en-US" }, "timeZone" to tz.id.orEmpty(), "utcOffsetSeconds" to tz.getOffset(now) / 1000)
   }
 
-  private fun identifiers(refreshAdvertising: Boolean = false, refreshDevice: Boolean = false): Map<String, Any> {
-    val local = prefs().getString("localUuid", null) ?: UUID.randomUUID().toString().also { prefs().edit().putString("localUuid", it).apply() }
+  private fun identifiers(options: LocalIdOptions, refreshAdvertising: Boolean = false, refreshDevice: Boolean = false): Map<String, Any> {
+    val localIds = secureLocalIds.readAll(options)
+    val primaryLocalId = localIds.primary
+    val secondaryLocalId = localIds.secondary
     val andi = Settings.Secure.getString(context.contentResolver, Settings.Secure.ANDROID_ID).orEmpty()
     val gaid = if (refreshAdvertising || true) runCatching { AdvertisingIdClient.getAdvertisingIdInfo(context).let { if (it.isLimitAdTrackingEnabled) "" else it.id.orEmpty() } }.getOrDefault("") else ""
     val asid = if (refreshDevice || true) runCatching { Tasks.await(AppSet.getClient(context).appSetIdInfo).id.orEmpty() }.getOrDefault("") else ""
     val oaid = "" // Optional MSA SDK may be integrated by a host flavor; unsupported devices return ''.
     val aifa = gaid
-    return mapOf("idfa" to "", "andi" to andi, "aifa" to aifa, "gaid" to gaid, "aaid" to gaid, "oaid" to oaid, "asid" to asid, "idfv" to "", "localUuid" to local,
-      "advertisingId" to listOf(aifa, gaid, oaid).firstOrNull { it.isNotEmpty() }.orEmpty(), "deviceId" to listOf(andi, asid, local).firstOrNull { it.isNotEmpty() }.orEmpty())
+    return mapOf("idfa" to "", "andi" to andi, "aifa" to aifa, "gaid" to gaid, "aaid" to gaid, "oaid" to oaid, "asid" to asid, "idfv" to "",
+      "primaryLocalId" to primaryLocalId, "secondaryLocalId" to secondaryLocalId, "localIdsPersisted" to localIds.persisted,
+      "advertisingId" to listOf(aifa, gaid, oaid).firstOrNull { it.isNotEmpty() }.orEmpty(), "deviceId" to listOf(andi, asid, primaryLocalId).firstOrNull { it.isNotEmpty() }.orEmpty())
   }
 
-  private fun prefs() = context.getSharedPreferences("app_device_info", Context.MODE_PRIVATE)
+  private fun localIdOptions(call: MethodCall): LocalIdOptions {
+    val args = call.arguments as? Map<*, *> ?: return LocalIdOptions()
+    val options = args["localIdStorageOptions"] as? Map<*, *> ?: return LocalIdOptions()
+    return LocalIdOptions(
+      fallbackNamespace = options["fallbackNamespace"] as? String,
+      primaryKey = options["primaryKey"] as? String,
+      secondaryKey = options["secondaryKey"] as? String,
+    )
+  }
+  private fun slot(call: MethodCall) = (call.argument<String>("slot") ?: "primary").let { if (it == "secondary") LocalIdSlot.SECONDARY else LocalIdSlot.PRIMARY }
+  private fun value(call: MethodCall) = call.argument<String>("value") ?: throw IllegalArgumentException("Local ID value is required.")
   private fun disk(total: Boolean): Long { val s = StatFs(Environment.getDataDirectory().path); return if (total) s.totalBytes else s.availableBytes }
   private fun ram(total: Boolean): Long { val i = ActivityManager.MemoryInfo(); (context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager).getMemoryInfo(i); return (if (total) i.totalMem else i.availMem) / 1048576 }
   private fun features() = context.packageManager.systemAvailableFeatures.mapNotNull { it.name }
   private fun isEmulator() = Build.FINGERPRINT.startsWith("generic") || Build.MODEL.contains("Emulator", true) || Build.HARDWARE.contains("goldfish", true)
   private fun signature(bytes: ByteArray?): String = bytes?.let { MessageDigest.getInstance("SHA-256").digest(it).joinToString("") { b -> "%02x".format(b) } }.orEmpty()
-  private fun failure(value: String) = mapOf("isSuccess" to false, "idfa" to "", "failure" to value)
-  private fun emptyResult() = failure("systemError")
+  private fun failure(options: LocalIdOptions, value: String) = identifiers(options).toMutableMap().apply { put("isSuccess", false); put("failure", value) }
+  private fun emptyResult() = mapOf(
+    "isSuccess" to false, "idfa" to "", "failure" to "systemError",
+    "primaryLocalId" to UUID.randomUUID().toString(),
+    "secondaryLocalId" to UUID.randomUUID().toString(),
+    "localIdsPersisted" to false,
+  )
+}
+
+private enum class LocalIdSlot { PRIMARY, SECONDARY }
+
+private data class LocalIdOptions(
+  val fallbackNamespace: String? = null,
+  val primaryKey: String? = null,
+  val secondaryKey: String? = null,
+)
+
+private data class LocalIdResult(
+  val primary: String,
+  val secondary: String,
+  val persisted: Boolean,
+) {
+  fun toMap() = mapOf<String, Any>("primaryLocalId" to primary, "secondaryLocalId" to secondary, "localIdsPersisted" to persisted)
+}
+
+private class SecureLocalIdStorage(private val context: Context) {
+  private val dataPrefs = context.getSharedPreferences("app_info_helper_secure_local_ids", Context.MODE_PRIVATE)
+  private val configPrefs = context.getSharedPreferences("app_info_helper_secure_local_ids_config", Context.MODE_PRIVATE)
+  private val keyAlias = "app_info_helper_secure_local_ids_rsa"
+  private val aesKeyName = "app_info_helper_secure_local_ids_aes_key"
+  private val keyStore = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
+
+  fun read(slot: LocalIdSlot, options: LocalIdOptions): LocalIdResult {
+    val all = readAll(options)
+    return when (slot) {
+      LocalIdSlot.PRIMARY -> LocalIdResult(all.primary, all.secondary, all.persisted)
+      LocalIdSlot.SECONDARY -> LocalIdResult(all.primary, all.secondary, all.persisted)
+    }
+  }
+
+  fun readAll(options: LocalIdOptions): LocalIdResult {
+    val primary = getOrCreate(LocalIdSlot.PRIMARY, options)
+    val secondary = getOrCreate(LocalIdSlot.SECONDARY, options)
+    return LocalIdResult(primary.value, secondary.value, primary.persisted && secondary.persisted)
+  }
+
+  fun write(slot: LocalIdSlot, value: String, options: LocalIdOptions): LocalIdResult {
+    val persisted = writeKeys(keys(slot, options), value)
+    val all = readAll(options)
+    return when (slot) {
+      LocalIdSlot.PRIMARY -> LocalIdResult(value, all.secondary, persisted && all.persisted)
+      LocalIdSlot.SECONDARY -> LocalIdResult(all.primary, value, persisted && all.persisted)
+    }
+  }
+
+  fun reset(slot: LocalIdSlot, options: LocalIdOptions): LocalIdResult {
+    delete(slot, options)
+    return write(slot, UUID.randomUUID().toString(), options)
+  }
+
+  fun resetAll(options: LocalIdOptions): LocalIdResult {
+    deleteAll(options)
+    val primaryValue = UUID.randomUUID().toString()
+    val secondaryValue = UUID.randomUUID().toString()
+    val primarySaved = writeKeys(keys(LocalIdSlot.PRIMARY, options), primaryValue)
+    val secondarySaved = writeKeys(keys(LocalIdSlot.SECONDARY, options), secondaryValue)
+    return LocalIdResult(primaryValue, secondaryValue, primarySaved && secondarySaved)
+  }
+
+  fun contains(slot: LocalIdSlot, options: LocalIdOptions) = keys(slot, options).any { dataPrefs.contains(it) }
+  fun delete(slot: LocalIdSlot, options: LocalIdOptions) { dataPrefs.edit().also { e -> keys(slot, options).forEach { e.remove(it) } }.apply() }
+  fun deleteAll(options: LocalIdOptions) { delete(LocalIdSlot.PRIMARY, options); delete(LocalIdSlot.SECONDARY, options) }
+
+  private data class ValueResult(val value: String, val persisted: Boolean)
+
+  private fun getOrCreate(slot: LocalIdSlot, options: LocalIdOptions): ValueResult {
+    val existing = readPlain(slot, options)
+    val value = existing ?: UUID.randomUUID().toString()
+    val persisted = writeKeys(keys(slot, options), value)
+    return ValueResult(value, persisted)
+  }
+
+  private fun readPlain(slot: LocalIdSlot, options: LocalIdOptions): String? {
+    for (key in keys(slot, options)) {
+      val raw = dataPrefs.getString(key, null) ?: continue
+      val value = runCatching { decrypt(raw) }.getOrNull()
+      if (!value.isNullOrEmpty()) return value
+    }
+    return null
+  }
+
+  private fun writeKeys(keys: List<String>, value: String): Boolean = runCatching {
+    val encrypted = encrypt(value)
+    val editor = dataPrefs.edit()
+    keys.forEach { editor.putString(it, encrypted) }
+    editor.commit()
+  }.getOrDefault(false)
+
+  private fun keys(slot: LocalIdSlot, options: LocalIdOptions): List<String> {
+    val explicit = if (slot == LocalIdSlot.PRIMARY) options.primaryKey else options.secondaryKey
+    if (!explicit.isNullOrEmpty()) return listOf(explicit)
+    val suffix = if (slot == LocalIdSlot.PRIMARY) "primaryLocalId" else "secondaryLocalId"
+    return listOfNotNull(context.packageName.takeIf { it.isNotEmpty() }, options.fallbackNamespace?.takeIf { it.isNotEmpty() }, "app_info_helper")
+      .distinct()
+      .map { "$it.$suffix" }
+  }
+
+  private fun encrypt(value: String): String {
+    val cipher = Cipher.getInstance("AES/GCM/NoPadding")
+    val iv = ByteArray(12).also { SecureRandom().nextBytes(it) }
+    cipher.init(Cipher.ENCRYPT_MODE, getAesKey(), GCMParameterSpec(128, iv))
+    val encrypted = cipher.doFinal(value.toByteArray(Charsets.UTF_8))
+    return Base64.encodeToString(iv + encrypted, Base64.NO_WRAP)
+  }
+
+  private fun decrypt(value: String): String {
+    val bytes = Base64.decode(value, Base64.NO_WRAP)
+    val iv = bytes.copyOfRange(0, 12)
+    val encrypted = bytes.copyOfRange(12, bytes.size)
+    val cipher = Cipher.getInstance("AES/GCM/NoPadding")
+    cipher.init(Cipher.DECRYPT_MODE, getAesKey(), GCMParameterSpec(128, iv))
+    return String(cipher.doFinal(encrypted), Charsets.UTF_8)
+  }
+
+  private fun getAesKey(): SecretKey {
+    val wrapped = configPrefs.getString(aesKeyName, null)
+    if (wrapped != null) {
+      val cipher = Cipher.getInstance("RSA/ECB/OAEPWithSHA-256AndMGF1Padding")
+      cipher.init(Cipher.UNWRAP_MODE, getOrCreateKeyPair().private)
+      return cipher.unwrap(Base64.decode(wrapped, Base64.NO_WRAP), "AES", Cipher.SECRET_KEY) as SecretKey
+    }
+    val key = KeyGenerator.getInstance("AES").apply { init(256) }.generateKey()
+    val cipher = Cipher.getInstance("RSA/ECB/OAEPWithSHA-256AndMGF1Padding")
+    cipher.init(Cipher.WRAP_MODE, getOrCreateKeyPair().public)
+    configPrefs.edit().putString(aesKeyName, Base64.encodeToString(cipher.wrap(key), Base64.NO_WRAP)).commit()
+    return key
+  }
+
+  private fun getOrCreateKeyPair(): java.security.KeyPair {
+    (keyStore.getEntry(keyAlias, null) as? KeyStore.PrivateKeyEntry)?.let { return java.security.KeyPair(it.certificate.publicKey, it.privateKey) }
+    val generator = KeyPairGenerator.getInstance(KeyProperties.KEY_ALGORITHM_RSA, "AndroidKeyStore")
+    generator.initialize(KeyGenParameterSpec.Builder(keyAlias, KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT)
+      .setDigests(KeyProperties.DIGEST_SHA256, KeyProperties.DIGEST_SHA512)
+      .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_RSA_OAEP)
+      .build())
+    return generator.generateKeyPair()
+  }
 }

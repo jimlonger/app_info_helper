@@ -15,8 +15,9 @@ your app.
   name, physical device flag, disk size, and memory size.
 - Locale and timezone metadata: language code, ISO-3 language code, country
   code, ISO-3 country code, locale, timezone, and UTC offset.
-- Identifiers: IDFA, IDFV, Android ID, Google advertising ID, App Set ID, local
-  UUID, and unified `advertisingId` / `deviceId` convenience getters.
+- Identifiers: IDFA, IDFV, Android ID, Google advertising ID, App Set ID,
+  secure primary/secondary local IDs, and unified `advertisingId` / `deviceId`
+  convenience getters.
 - iOS ATT authorization helper for requesting IDFA access at the right moment in
   your app flow.
 
@@ -24,7 +25,7 @@ your app.
 
 ```yaml
 dependencies:
-  app_info_helper: ^0.1.3
+  app_info_helper: ^0.1.4
 ```
 
 Then import the package:
@@ -50,6 +51,8 @@ final model = info.deviceModel;
 final country = info.countryCode;
 final timeZone = info.timeZone;
 final deviceId = info.deviceId;
+final primaryLocalId = info.primaryLocalId;
+final secondaryLocalId = info.secondaryLocalId;
 ```
 
 If native values have not been loaded yet, the first getter read starts loading
@@ -67,7 +70,8 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final initialized = await AppInfoHelper.instance.init();
   if (!initialized) {
-    // Native values are unavailable. Getters still return documented fallbacks.
+    // Some native values or secure local ID persistence are unavailable.
+    // primaryLocalId and secondaryLocalId still have in-memory UUID fallbacks.
   }
   runApp(const MyApp());
 }
@@ -89,10 +93,44 @@ final model = info.deviceModel;
 final refreshed = await AppInfoHelper.instance.refresh();
 await AppInfoHelper.instance.refreshAdvertisingId();
 await AppInfoHelper.instance.refreshDeviceId();
-await AppInfoHelper.instance.resetLocalUuid();
+await AppInfoHelper.instance.resetLocalId();
 ```
 
 The plugin also refreshes cached values when the app returns to the foreground.
+
+## Secure Local IDs
+
+`primaryLocalId` and `secondaryLocalId` are UUID values generated independently
+on each platform. Android stores them with Android KeyStore + RSA OAEP +
+AES-GCM encrypted SharedPreferences. iOS stores them in Keychain with
+`kSecAttrAccessibleWhenUnlocked`.
+
+By default, storage keys use the Android package name or iOS bundle identifier.
+If the platform namespace is temporarily unavailable, provide a fallback
+namespace; when both namespaces are available on the same platform, values are
+synchronized so future reads stay consistent.
+
+```dart
+await AppInfoHelper.instance.init(
+  localIdStorageOptions: const LocalIdStorageOptions(
+    fallbackNamespace: 'my_app',
+  ),
+);
+```
+
+Manage either local ID through a single slot-based API:
+
+```dart
+final primary = await AppInfoHelper.instance.readLocalId();
+final secondary = await AppInfoHelper.instance.readLocalId(
+  slot: LocalIdSlot.secondary,
+);
+
+await AppInfoHelper.instance.writeLocalId('custom-id');
+final exists = await AppInfoHelper.instance.containsLocalId();
+await AppInfoHelper.instance.deleteLocalId();
+final newPrimary = await AppInfoHelper.instance.resetLocalId();
+```
 
 ## iOS IDFA and ATT
 
