@@ -69,8 +69,16 @@ public final class XAppUtilsPlugin: NSObject, FlutterPlugin {
   }
 
   private func locale() -> [String: Any] {
-    let l = Locale.current; let country = l.regionCode ?? "US"; let language = l.languageCode ?? "en"; let tz = TimeZone.current
-    return ["languageCode": language, "languageCode3": ISO639.alpha3(language), "countryCode": country, "countryCode3": ISO3166.alpha3(country), "locale": l.identifier.isEmpty ? "en_US" : l.identifier, "timeZone": tz.identifier, "utcOffsetSeconds": tz.secondsFromGMT()]
+    let localeIdentifier = Locale.preferredLanguages.first ?? "en"
+    let systemLocale = Locale(identifier: localeIdentifier)
+    let country = systemLocale.regionCode ?? Locale.current.regionCode ?? "US"
+    let language = systemLocale.languageCode ?? "en"
+    let scriptCode = systemLocale.scriptCode ?? ""
+    let languageTag = [language, scriptCode.isEmpty ? nil : scriptCode]
+      .compactMap { $0 }
+      .joined(separator: "-")
+    let tz = TimeZone.current
+    return ["languageCode": language, "languageCode3": ISO639.alpha3(language), "languageTag": languageTag, "languageScriptCode": scriptCode, "countryCode": country, "countryCode3": ISO3166.alpha3(country), "locale": localeIdentifier, "timeZone": tz.identifier, "utcOffsetSeconds": tz.secondsFromGMT()]
   }
 
   private func identifiers(_ options: LocalIdOptions) -> [String: Any] {
@@ -247,5 +255,21 @@ private final class SecureLocalIdStorage {
   }
 }
 
-private enum ISO639 { static func alpha3(_ code: String) -> String { ["en":"eng", "zh":"zho", "es":"spa", "fr":"fra", "de":"deu", "ja":"jpn", "ko":"kor", "pt":"por", "ru":"rus", "ar":"ara", "hi":"hin", "id":"ind", "vi":"vie", "th":"tha", "it":"ita", "nl":"nld", "tr":"tur", "pl":"pol" ][code.lowercased()] ?? "" } }
-private enum ISO3166 { static func alpha3(_ code: String) -> String { ["US":"USA", "CN":"CHN", "GB":"GBR", "JP":"JPN", "KR":"KOR", "CA":"CAN", "AU":"AUS", "DE":"DEU", "FR":"FRA", "IT":"ITA", "ES":"ESP", "BR":"BRA", "IN":"IND", "ID":"IDN", "SG":"SGP", "MY":"MYS", "TH":"THA", "VN":"VNM", "PH":"PHL", "RU":"RUS", "MX":"MEX", "AE":"ARE", "HK":"HKG", "TW":"TWN", "MO":"MAC" ][code.uppercased()] ?? "" } }
+private enum ISO639 {
+  // ISO 639-1 language codes and their ISO 639-2/T (ISO 639-3-compatible) values.
+  private static let alpha2ToAlpha3: [String: String] = ["aa":"aar","ab":"abk","af":"afr","ak":"aka","sq":"sqi","am":"amh","ar":"ara","an":"arg","hy":"hye","as":"asm","av":"ava","ae":"ave","ay":"aym","az":"aze","ba":"bak","bm":"bam","eu":"eus","be":"bel","bn":"ben","bi":"bis","bs":"bos","br":"bre","bg":"bul","my":"mya","ca":"cat","ch":"cha","ce":"che","zh":"zho","cu":"chu","cv":"chv","kw":"cor","co":"cos","cr":"cre","cs":"ces","da":"dan","dv":"div","nl":"nld","dz":"dzo","en":"eng","eo":"epo","et":"est","ee":"ewe","fo":"fao","fj":"fij","fi":"fin","fr":"fra","fy":"fry","ff":"ful","ka":"kat","de":"deu","gd":"gla","ga":"gle","gl":"glg","gv":"glv","el":"ell","gn":"grn","gu":"guj","ht":"hat","ha":"hau","he":"heb","hz":"her","hi":"hin","ho":"hmo","hr":"hrv","hu":"hun","ig":"ibo","is":"isl","io":"ido","ii":"iii","iu":"iku","ie":"ile","ia":"ina","id":"ind","ik":"ipk","it":"ita","jv":"jav","ja":"jpn","kl":"kal","kn":"kan","ks":"kas","kr":"kau","kk":"kaz","km":"khm","ki":"kik","rw":"kin","ky":"kir","kv":"kom","kg":"kon","ko":"kor","kj":"kua","ku":"kur","lo":"lao","la":"lat","lv":"lav","li":"lim","ln":"lin","lt":"lit","lb":"ltz","lu":"lub","lg":"lug","mk":"mkd","mh":"mah","ml":"mal","mi":"mri","mr":"mar","ms":"msa","mg":"mlg","mt":"mlt","mn":"mon","na":"nau","nv":"nav","nr":"nbl","nd":"nde","ng":"ndo","ne":"nep","nn":"nno","nb":"nob","no":"nor","ny":"nya","oc":"oci","oj":"oji","or":"ori","om":"orm","os":"oss","pa":"pan","fa":"fas","pi":"pli","pl":"pol","pt":"por","ps":"pus","qu":"que","rm":"roh","ro":"ron","rn":"run","ru":"rus","sg":"sag","sa":"san","si":"sin","sk":"slk","sl":"slv","se":"sme","sm":"smo","sn":"sna","sd":"snd","so":"som","st":"sot","es":"spa","sc":"srd","sr":"srp","ss":"ssw","su":"sun","sw":"swa","sv":"swe","ty":"tah","ta":"tam","tt":"tat","te":"tel","tg":"tgk","tl":"tgl","th":"tha","bo":"bod","ti":"tir","to":"ton","tn":"tsn","ts":"tso","tk":"tuk","tr":"tur","tw":"twi","ug":"uig","uk":"ukr","ur":"urd","uz":"uzb","ve":"ven","vi":"vie","vo":"vol","cy":"cym","wa":"wln","wo":"wol","xh":"xho","yi":"yid","yo":"yor","za":"zha","zu":"zul"]
+
+  static func alpha3(_ code: String) -> String {
+    alpha2ToAlpha3[code.lowercased()] ?? ""
+  }
+}
+private enum ISO3166 {
+  // ISO 3166-1's currently assigned alpha-2 and alpha-3 code elements.
+  private static let alpha2ToAlpha3: [String: String] = [
+    "AF":"AFG", "AX":"ALA", "AL":"ALB", "DZ":"DZA", "AS":"ASM", "AD":"AND", "AO":"AGO", "AI":"AIA", "AQ":"ATA", "AG":"ATG", "AR":"ARG", "AM":"ARM", "AW":"ABW", "AU":"AUS", "AT":"AUT", "AZ":"AZE", "BS":"BHS", "BH":"BHR", "BD":"BGD", "BB":"BRB", "BY":"BLR", "BE":"BEL", "BZ":"BLZ", "BJ":"BEN", "BM":"BMU", "BT":"BTN", "BO":"BOL", "BQ":"BES", "BA":"BIH", "BW":"BWA", "BV":"BVT", "BR":"BRA", "IO":"IOT", "BN":"BRN", "BG":"BGR", "BF":"BFA", "BI":"BDI", "CV":"CPV", "KH":"KHM", "CM":"CMR", "CA":"CAN", "KY":"CYM", "CF":"CAF", "TD":"TCD", "CL":"CHL", "CN":"CHN", "CX":"CXR", "CC":"CCK", "CO":"COL", "KM":"COM", "CG":"COG", "CD":"COD", "CK":"COK", "CR":"CRI", "CI":"CIV", "HR":"HRV", "CU":"CUB", "CW":"CUW", "CY":"CYP", "CZ":"CZE", "DK":"DNK", "DJ":"DJI", "DM":"DMA", "DO":"DOM", "EC":"ECU", "EG":"EGY", "SV":"SLV", "GQ":"GNQ", "ER":"ERI", "EE":"EST", "SZ":"SWZ", "ET":"ETH", "FK":"FLK", "FO":"FRO", "FJ":"FJI", "FI":"FIN", "FR":"FRA", "GF":"GUF", "PF":"PYF", "TF":"ATF", "GA":"GAB", "GM":"GMB", "GE":"GEO", "DE":"DEU", "GH":"GHA", "GI":"GIB", "GR":"GRC", "GL":"GRL", "GD":"GRD", "GP":"GLP", "GU":"GUM", "GT":"GTM", "GG":"GGY", "GN":"GIN", "GW":"GNB", "GY":"GUY", "HT":"HTI", "HM":"HMD", "VA":"VAT", "HN":"HND", "HK":"HKG", "HU":"HUN", "IS":"ISL", "IN":"IND", "ID":"IDN", "IR":"IRN", "IQ":"IRQ", "IE":"IRL", "IM":"IMN", "IL":"ISR", "IT":"ITA", "JM":"JAM", "JP":"JPN", "JE":"JEY", "JO":"JOR", "KZ":"KAZ", "KE":"KEN", "KI":"KIR", "KP":"PRK", "KR":"KOR", "KW":"KWT", "KG":"KGZ", "LA":"LAO", "LV":"LVA", "LB":"LBN", "LS":"LSO", "LR":"LBR", "LY":"LBY", "LI":"LIE", "LT":"LTU", "LU":"LUX", "MO":"MAC", "MG":"MDG", "MW":"MWI", "MY":"MYS", "MV":"MDV", "ML":"MLI", "MT":"MLT", "MH":"MHL", "MQ":"MTQ", "MR":"MRT", "MU":"MUS", "YT":"MYT", "MX":"MEX", "FM":"FSM", "MD":"MDA", "MC":"MCO", "MN":"MNG", "ME":"MNE", "MS":"MSR", "MA":"MAR", "MZ":"MOZ", "MM":"MMR", "NA":"NAM", "NR":"NRU", "NP":"NPL", "NL":"NLD", "NC":"NCL", "NZ":"NZL", "NI":"NIC", "NE":"NER", "NG":"NGA", "NU":"NIU", "NF":"NFK", "MK":"MKD", "MP":"MNP", "NO":"NOR", "OM":"OMN", "PK":"PAK", "PW":"PLW", "PS":"PSE", "PA":"PAN", "PG":"PNG", "PY":"PRY", "PE":"PER", "PH":"PHL", "PN":"PCN", "PL":"POL", "PT":"PRT", "PR":"PRI", "QA":"QAT", "RE":"REU", "RO":"ROU", "RU":"RUS", "RW":"RWA", "BL":"BLM", "SH":"SHN", "KN":"KNA", "LC":"LCA", "MF":"MAF", "PM":"SPM", "VC":"VCT", "WS":"WSM", "SM":"SMR", "ST":"STP", "SA":"SAU", "SN":"SEN", "RS":"SRB", "SC":"SYC", "SL":"SLE", "SG":"SGP", "SX":"SXM", "SK":"SVK", "SI":"SVN", "SB":"SLB", "SO":"SOM", "ZA":"ZAF", "GS":"SGS", "SS":"SSD", "ES":"ESP", "LK":"LKA", "SD":"SDN", "SR":"SUR", "SJ":"SJM", "SE":"SWE", "CH":"CHE", "SY":"SYR", "TW":"TWN", "TJ":"TJK", "TZ":"TZA", "TH":"THA", "TL":"TLS", "TG":"TGO", "TK":"TKL", "TO":"TON", "TT":"TTO", "TN":"TUN", "TR":"TUR", "TM":"TKM", "TC":"TCA", "TV":"TUV", "UG":"UGA", "UA":"UKR", "AE":"ARE", "GB":"GBR", "US":"USA", "UM":"UMI", "UY":"URY", "UZ":"UZB", "VU":"VUT", "VE":"VEN", "VN":"VNM", "VG":"VGB", "VI":"VIR", "WF":"WLF", "EH":"ESH", "YE":"YEM", "ZM":"ZMB", "ZW":"ZWE"
+  ]
+
+  static func alpha3(_ code: String) -> String {
+    alpha2ToAlpha3[code.uppercased()] ?? ""
+  }
+}

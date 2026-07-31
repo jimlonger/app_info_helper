@@ -73,7 +73,8 @@ class XAppUtilsPlugin : FlutterPlugin, MethodChannel.MethodCallHandler {
   }
 
   private fun all(options: LocalIdOptions): Map<String, Any> = HashMap<String, Any>().apply {
-    putAll(common()); putAll(android()); putAll(app()); putAll(locale()); putAll(identifiers(options))
+    putAll(common()); putAll(android()); putAll(app()); putAll(locale())
+    putAll(identifiers(options, loadAdvertisingId = true, loadAppSetId = true))
   }
 
   private fun common() = mapOf<String, Any>(
@@ -110,11 +111,16 @@ class XAppUtilsPlugin : FlutterPlugin, MethodChannel.MethodCallHandler {
   }
 
   private fun locale(): Map<String, Any> {
-    val l = if (Build.VERSION.SDK_INT >= 24) context.resources.configuration.locales[0] else @Suppress("DEPRECATION") context.resources.configuration.locale
+    val l = Locale.getDefault()
+    val localeTag = l.toLanguageTag().ifEmpty { "en" }
+    val scriptCode = l.script.orEmpty()
+    val languageTag = listOfNotNull(l.language.takeIf { it.isNotEmpty() }, scriptCode.takeIf { it.isNotEmpty() }).joinToString("-").ifEmpty { "en" }
     val tz = TimeZone.getDefault(); val now = System.currentTimeMillis()
-    return mapOf("languageCode" to l.language.ifEmpty { "en" }, "languageCode3" to runCatching { l.getISO3Language() }.getOrDefault("eng"),
-      "countryCode" to l.country.ifEmpty { "US" }, "countryCode3" to runCatching { l.getISO3Country() }.getOrDefault("USA"),
-      "locale" to l.toLanguageTag().ifEmpty { "en-US" }, "timeZone" to tz.id.orEmpty(), "utcOffsetSeconds" to tz.getOffset(now) / 1000)
+    val languageCode = l.language.ifEmpty { "en" }
+    val countryCode = l.country.ifEmpty { "US" }
+    return mapOf("languageCode" to languageCode, "languageCode3" to IsoCodeMaps.languageAlpha3(languageCode), "languageTag" to languageTag, "languageScriptCode" to scriptCode,
+      "countryCode" to countryCode, "countryCode3" to IsoCodeMaps.countryAlpha3(countryCode),
+      "locale" to localeTag, "timeZone" to tz.id.orEmpty(), "utcOffsetSeconds" to tz.getOffset(now) / 1000)
   }
 
   private fun identifiers(

@@ -388,16 +388,22 @@ class XAppUtils with WidgetsBindingObserver {
   int get installTime => _i('installTime');
   int get updateTime => _i('updateTime');
 
-  // Locale fields. These have the specified US/English fallbacks.
+  // Locale fields. These have the documented English fallbacks.
   String get languageCode =>
       _firstNonEmpty(<String>[_s('languageCode'), _s('languageCode3')], 'en');
   String get languageCode3 =>
       _firstNonEmpty(<String>[_s('languageCode3')], 'eng');
+
+  /// BCP-47 language tag without a region, such as `zh-Hans`.
+  String get languageTag => _s('languageTag', 'en');
+
+  /// ISO 15924 script code, such as `Hans` for Simplified Chinese.
+  String get languageScriptCode => _s('languageScriptCode');
   String get countryCode =>
       _firstNonEmpty(<String>[_s('countryCode'), _s('countryCode3')], 'US');
   String get countryCode3 =>
       _firstNonEmpty(<String>[_s('countryCode3')], 'USA');
-  String get locale => _s('locale', 'en_US');
+  String get locale => _s('locale', 'en');
   String get timeZone => _s('timeZone');
   int get utcOffsetSeconds => _i('utcOffsetSeconds');
 

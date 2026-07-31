@@ -48,6 +48,6 @@ void main() {
     await tester.tap(printJsonButton);
     await tester.pump();
 
-    expect(find.textContaining('完整参数 JSON'), findsOneWidget);
+    expect(find.textContaining('完整参数 JSON'), findsNWidgets(2));
   });
 }

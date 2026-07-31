@@ -28,6 +28,8 @@ void main() {
         'deviceModel': 'Pixel',
         'languageCode': 'zh',
         'languageCode3': 'zho',
+        'languageTag': 'zh-Hans',
+        'languageScriptCode': 'Hans',
         'countryCode': 'CN',
         'countryCode3': 'CHN',
         'primaryLocalId': 'primary-id',
@@ -45,6 +47,8 @@ void main() {
     expect(XAppUtils.instance.deviceModel, 'Pixel');
     expect(XAppUtils.instance.languageCode, 'zh');
     expect(XAppUtils.instance.languageCode3, 'zho');
+    expect(XAppUtils.instance.languageTag, 'zh-Hans');
+    expect(XAppUtils.instance.languageScriptCode, 'Hans');
     expect(XAppUtils.instance.countryCode, 'CN');
     expect(XAppUtils.instance.countryCode3, 'CHN');
     expect(XAppUtils.instance.primaryLocalId, 'primary-id');
@@ -105,6 +109,7 @@ void main() {
   test('locale getters use documented fallbacks', () {
     expect(XAppUtils.instance.languageCode, isNotEmpty);
     expect(XAppUtils.instance.languageCode3, isNotEmpty);
+    expect(XAppUtils.instance.languageTag, isNotEmpty);
     expect(XAppUtils.instance.countryCode, isNotEmpty);
     expect(XAppUtils.instance.countryCode3, isNotEmpty);
   });

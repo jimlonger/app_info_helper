@@ -12,7 +12,7 @@ XAppUtils.instance
 
 ```yaml
 dependencies:
-  x_app_utils: ^0.1.5
+  x_app_utils: ^0.1.6
 ```
 
 导入：
@@ -190,6 +190,8 @@ iOS 宿主 App 需要在 `ios/Runner/Info.plist` 中添加：
 
 ## 常用字段
 
+以下字段都通过同一个 `XAppUtils.instance` 读取。平台不支持的字段不会返回 `null`，而是返回文档中的默认值。
+
 ### 应用信息
 
 ```dart
@@ -202,6 +204,9 @@ XAppUtils.instance.installerStore;
 XAppUtils.instance.installTime;
 XAppUtils.instance.updateTime;
 ```
+
+- Android：`appName` 来自应用 label，`packageName` 来自包名，`version` / `buildNumber` 来自 PackageManager，`buildSignature` 为签名证书 SHA-256，`installerStore` / `installTime` / `updateTime` 尽量读取安装来源和时间。
+- iOS：`appName` 来自 `CFBundleDisplayName` 或 `CFBundleName`，`packageName` 为 bundle identifier，`version` / `buildNumber` 来自 Info.plist。签名、安装来源和安装/更新时间返回默认值。
 
 ### 设备和系统信息
 
@@ -218,17 +223,25 @@ XAppUtils.instance.physicalRamSize;
 XAppUtils.instance.availableRamSize;
 ```
 
+- Android：设备字段主要来自 `Build.*`、`ActivityManager`、`StatFs` 和系统特性列表。
+- iOS：设备字段主要来自 `UIDevice`、`utsname`、`ProcessInfo` 和文件系统属性。`availableRamSize` 返回 `0`，因为 iOS 没有稳定公开的全局可用内存 API。
+
 ### 语言、地区和时区
 
 ```dart
 XAppUtils.instance.languageCode;
 XAppUtils.instance.languageCode3;
+XAppUtils.instance.languageTag; // 例如 zh-Hans
+XAppUtils.instance.languageScriptCode; // 例如 Hans
 XAppUtils.instance.countryCode;
 XAppUtils.instance.countryCode3;
 XAppUtils.instance.locale;
 XAppUtils.instance.timeZone;
 XAppUtils.instance.utcOffsetSeconds;
 ```
+
+- Android：语言和地区来自当前 Locale，ISO-3 映射内置在插件中。
+- iOS：语言优先读取系统 preferred languages，避免 App 未本地化时误报为 App fallback 语言；`languageTag` 返回不含地区的 BCP-47 标签，例如 `zh-Hans`；`locale` 返回完整 preferred language 标识。
 
 ### 标识符
 
@@ -243,6 +256,9 @@ XAppUtils.instance.asid;
 XAppUtils.instance.primaryLocalId;
 XAppUtils.instance.secondaryLocalId;
 ```
+
+- Android：`androidId` 来自 `Settings.Secure.ANDROID_ID`；`gaid` / `advertisingId` 需要按需调用 `refreshAdvertisingId()`；`asid` 来自 App Set ID；本地 ID 使用 Android KeyStore + RSA OAEP + AES-GCM 加密保存。
+- iOS：`idfv` 来自 `identifierForVendor`；`idfa` / `advertisingId` 只有 ATT 授权后才会有值；本地 ID 使用 Keychain 保存。
 
 ## Android 专属字段
 
@@ -295,9 +311,11 @@ XAppUtils.instance.iosUtsnameMachine;
 | --- | --- |
 | `languageCode` | `en` |
 | `languageCode3` | `eng` |
+| `languageTag` | `en` |
+| `languageScriptCode` | `''` |
 | `countryCode` | `US` |
 | `countryCode3` | `USA` |
-| `locale` | `en_US` |
+| `locale` | `en` |
 
 数字 getter 不可用时返回 `0`，布尔 getter 不可用时返回 `false`，列表 getter 不可用时返回空列表。
 

@@ -1,3 +1,20 @@
+## 0.1.6
+
+- Read iOS language metadata from the device's preferred-language list instead
+  of the app-resolved locale, so an unsupported app localization does not report
+  a different system language.
+- Add `languageTag` for the BCP-47 language and script identifier without a
+  region, such as `zh-Hans`, and make `locale` return the full preferred
+  language identifier.
+- Add `languageScriptCode` for the ISO 15924 script identifier, such as
+  `Hans`.
+- Expand iOS built-in ISO mappings to all 183 ISO 639-1 language codes and all
+  249 currently assigned ISO 3166-1 country and territory codes.
+- Make Android `getAll` refresh advertising and App Set identifiers too, so
+  initialization and foreground-resume refreshes replace every cached field.
+- Expanded README and usage docs with detailed feature and platform-field
+  guidance.
+
 ## 0.1.5
 
 - Renamed the package to `x_app_utils` and the public entry point to

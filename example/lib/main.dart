@@ -360,7 +360,7 @@ class _XAppUtilsConsolePageState extends State<XAppUtilsConsolePage> {
       TextEditingController(text: 'x_app_utils_example');
   final TextEditingController _localIdController =
       TextEditingController(text: 'example-local-id');
-  final List<String> _output = <String>[];
+  final Map<String, String> _outputs = <String, String>{};
 
   LocalIdSlot _slot = LocalIdSlot.primary;
   bool _running = false;
@@ -374,12 +374,12 @@ class _XAppUtilsConsolePageState extends State<XAppUtilsConsolePage> {
     super.dispose();
   }
 
-  void _append(String value) {
+  void _append(String key, String value) {
     if (!mounted) {
       return;
     }
     setState(() {
-      _output.insert(0, '[${DateTime.now().toIso8601String()}]\n$value');
+      _outputs[key] = '[${DateTime.now().toIso8601String()}]\n$value';
     });
   }
 
@@ -391,9 +391,9 @@ class _XAppUtilsConsolePageState extends State<XAppUtilsConsolePage> {
     setState(() => _running = true);
     try {
       final result = await action();
-      _append('$label\n$result');
+      _append(label, '$label\n$result');
     } catch (error, stackTrace) {
-      _append('$label 失败\n$error\n$stackTrace');
+      _append(label, '$label 失败\n$error\n$stackTrace');
     } finally {
       if (mounted) {
         setState(() => _running = false);
@@ -401,11 +401,11 @@ class _XAppUtilsConsolePageState extends State<XAppUtilsConsolePage> {
     }
   }
 
-  void _printData() {
-    _append('完整参数 JSON\n${_jsonEncoder.convert(_utils.data)}');
+  void _printData(String label) {
+    _append(label, '完整参数 JSON\n${_jsonEncoder.convert(_utils.data)}');
   }
 
-  void _printSummary() {
+  void _printSummary(String label) {
     final summary = <String, dynamic>{
       'isInitialized': _utils.isInitialized,
       'appName': _utils.appName,
@@ -422,17 +422,29 @@ class _XAppUtilsConsolePageState extends State<XAppUtilsConsolePage> {
       'primaryLocalId': _utils.primaryLocalId,
       'secondaryLocalId': _utils.secondaryLocalId,
     };
-    _append('常用参数\n${_jsonEncoder.convert(summary)}');
+    _append(label, '常用参数\n${_jsonEncoder.convert(summary)}');
   }
 
-  Future<void> _configureLocalIds() async {
+  Future<Map<String, dynamic>> _configureLocalIds() async {
     final namespace = _fallbackNamespaceController.text.trim();
     await _utils.configureLocalIds(
       LocalIdStorageOptions(
         fallbackNamespace: namespace.isEmpty ? null : namespace,
       ),
     );
-    return _printData();
+    return _utils.data;
+  }
+
+  Widget _actionButton({
+    required String label,
+    required VoidCallback onPressed,
+  }) {
+    return _ActionButton(
+      label: label,
+      running: _running,
+      onPressed: onPressed,
+      output: _outputs[label],
+    );
   }
 
   @override
@@ -444,47 +456,50 @@ class _XAppUtilsConsolePageState extends State<XAppUtilsConsolePage> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: <Widget>[
-          const Text('所有异步调用的返回值、异常和参数都会打印到本页面底部。'),
+          Row(
+            children: <Widget>[
+              const Expanded(child: Text('每个按钮的返回值、异常和参数会显示在按钮下方。')),
+              TextButton(
+                onPressed:
+                    _outputs.isEmpty ? null : () => setState(_outputs.clear),
+                child: const Text('清空输出'),
+              ),
+            ],
+          ),
           const SizedBox(height: 16),
           _ConsoleSection(
             title: '初始化与刷新',
             children: <Widget>[
-              _ActionButton(
+              _actionButton(
                 label: '初始化 init()',
-                running: _running,
-                onPressed: () => _run('init()', _utils.init),
+                onPressed: () => _run('初始化 init()', _utils.init),
               ),
-              _ActionButton(
+              _actionButton(
                 label: '等待 ready',
-                running: _running,
                 onPressed: () =>
-                    _run('ready', () async => (await _utils.ready).data),
+                    _run('等待 ready', () async => (await _utils.ready).data),
               ),
-              _ActionButton(
+              _actionButton(
                 label: '刷新全部 refresh()',
-                running: _running,
-                onPressed: () => _run('refresh()', _utils.refresh),
+                onPressed: () => _run('刷新全部 refresh()', _utils.refresh),
               ),
-              _ActionButton(
+              _actionButton(
                 label: '刷新广告 ID',
-                running: _running,
-                onPressed: () => _run('refreshAdvertisingId()', () async {
+                onPressed: () => _run('刷新广告 ID', () async {
                   await _utils.refreshAdvertisingId();
                   return _utils.advertisingId;
                 }),
               ),
-              _ActionButton(
+              _actionButton(
                 label: '刷新设备 ID',
-                running: _running,
-                onPressed: () => _run('refreshDeviceId()', () async {
+                onPressed: () => _run('刷新设备 ID', () async {
                   await _utils.refreshDeviceId();
                   return _utils.deviceId;
                 }),
               ),
-              _ActionButton(
+              _actionButton(
                 label: '请求 ATT / IDFA',
-                running: _running,
-                onPressed: () => _run('requestIdfaAuthorization()', () async {
+                onPressed: () => _run('请求 ATT / IDFA', () async {
                   final result = await _utils.requestIdfaAuthorization();
                   return <String, dynamic>{
                     'isSuccess': result.isSuccess,
@@ -498,15 +513,13 @@ class _XAppUtilsConsolePageState extends State<XAppUtilsConsolePage> {
           _ConsoleSection(
             title: '参数打印',
             children: <Widget>[
-              _ActionButton(
+              _actionButton(
                 label: '打印常用参数',
-                running: _running,
-                onPressed: _printSummary,
+                onPressed: () => _printSummary('打印常用参数'),
               ),
-              _ActionButton(
+              _actionButton(
                 label: '打印完整参数 JSON',
-                running: _running,
-                onPressed: _printData,
+                onPressed: () => _printData('打印完整参数 JSON'),
               ),
             ],
           ),
@@ -520,11 +533,9 @@ class _XAppUtilsConsolePageState extends State<XAppUtilsConsolePage> {
                 ),
               ),
               const SizedBox(height: 8),
-              _ActionButton(
+              _actionButton(
                 label: '配置本地 ID 存储',
-                running: _running,
-                onPressed: () =>
-                    _run('configureLocalIds()', _configureLocalIds),
+                onPressed: () => _run('配置本地 ID 存储', _configureLocalIds),
               ),
               DropdownButtonFormField<LocalIdSlot>(
                 initialValue: _slot,
@@ -551,17 +562,15 @@ class _XAppUtilsConsolePageState extends State<XAppUtilsConsolePage> {
                 decoration: InputDecoration(labelText: '$localIdLabel 写入值'),
               ),
               const SizedBox(height: 8),
-              _ActionButton(
+              _actionButton(
                 label: '读取 $localIdLabel',
-                running: _running,
-                onPressed: () => _run('readLocalId($_slot)', () {
+                onPressed: () => _run('读取 $localIdLabel', () {
                   return _utils.readLocalId(slot: _slot);
                 }),
               ),
-              _ActionButton(
+              _actionButton(
                 label: '写入 $localIdLabel',
-                running: _running,
-                onPressed: () => _run('writeLocalId($_slot)', () async {
+                onPressed: () => _run('写入 $localIdLabel', () async {
                   await _utils.writeLocalId(
                     _localIdController.text,
                     slot: _slot,
@@ -569,74 +578,42 @@ class _XAppUtilsConsolePageState extends State<XAppUtilsConsolePage> {
                   return _utils.data;
                 }),
               ),
-              _ActionButton(
+              _actionButton(
                 label: '检查 $localIdLabel 是否存在',
-                running: _running,
-                onPressed: () => _run('containsLocalId($_slot)', () {
+                onPressed: () => _run('检查 $localIdLabel 是否存在', () {
                   return _utils.containsLocalId(slot: _slot);
                 }),
               ),
-              _ActionButton(
+              _actionButton(
                 label: '重置 $localIdLabel',
-                running: _running,
-                onPressed: () => _run('resetLocalId($_slot)', () {
+                onPressed: () => _run('重置 $localIdLabel', () {
                   return _utils.resetLocalId(slot: _slot);
                 }),
               ),
-              _ActionButton(
+              _actionButton(
                 label: '删除 $localIdLabel',
-                running: _running,
-                onPressed: () => _run('deleteLocalId($_slot)', () async {
+                onPressed: () => _run('删除 $localIdLabel', () async {
                   await _utils.deleteLocalId(slot: _slot);
                   return _utils.data;
                 }),
               ),
-              _ActionButton(
+              _actionButton(
                 label: '读取全部本地 ID',
-                running: _running,
-                onPressed: () =>
-                    _run('readAllLocalIds()', _utils.readAllLocalIds),
+                onPressed: () => _run('读取全部本地 ID', _utils.readAllLocalIds),
               ),
-              _ActionButton(
+              _actionButton(
                 label: '重置全部本地 ID',
-                running: _running,
-                onPressed: () =>
-                    _run('resetAllLocalIds()', _utils.resetAllLocalIds),
+                onPressed: () => _run('重置全部本地 ID', _utils.resetAllLocalIds),
               ),
-              _ActionButton(
+              _actionButton(
                 label: '删除全部本地 ID',
-                running: _running,
-                onPressed: () => _run('deleteAllLocalIds()', () async {
+                onPressed: () => _run('删除全部本地 ID', () async {
                   await _utils.deleteAllLocalIds();
                   return _utils.data;
                 }),
               ),
             ],
           ),
-          const SizedBox(height: 12),
-          Row(
-            children: <Widget>[
-              Text('页面输出', style: Theme.of(context).textTheme.titleLarge),
-              const Spacer(),
-              TextButton(
-                onPressed:
-                    _output.isEmpty ? null : () => setState(_output.clear),
-                child: const Text('清空'),
-              ),
-            ],
-          ),
-          const Divider(),
-          if (_output.isEmpty)
-            const SelectableText('点击上方按钮后，结果将在这里显示。')
-          else
-            ..._output.map(
-              (entry) => Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: SelectableText(entry),
-                ),
-              ),
-            ),
         ],
       ),
     );
@@ -673,19 +650,39 @@ class _ActionButton extends StatelessWidget {
     required this.label,
     required this.running,
     required this.onPressed,
+    this.output,
   });
 
   final String label;
   final bool running;
   final VoidCallback onPressed;
+  final String? output;
 
   @override
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
-      child: OutlinedButton(
-        onPressed: running ? null : onPressed,
-        child: Text(label),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          OutlinedButton(
+            onPressed: running ? null : onPressed,
+            child: Text(label),
+          ),
+          if (output case final String value) ...<Widget>[
+            const SizedBox(height: 6),
+            DecoratedBox(
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: SelectableText(value),
+              ),
+            ),
+          ],
+        ],
       ),
     );
   }

@@ -20,12 +20,82 @@ your app.
   convenience getters.
 - iOS ATT authorization helper for requesting IDFA access at the right moment in
   your app flow.
+- Lifecycle-friendly EventBus helpers for plain Dart owners, Flutter `State`,
+  and GetX controllers.
+
+## Platform Field Guide
+
+All fields are exposed from the same `XAppUtils.instance` API. Platform-specific
+fields return documented fallbacks on unsupported platforms instead of `null`.
+
+### App metadata
+
+| Getter | Android | iOS |
+| --- | --- | --- |
+| `appName` | Application label | `CFBundleDisplayName` or `CFBundleName` |
+| `packageName` | Android package name | Bundle identifier |
+| `version` | `versionName` | `CFBundleShortVersionString` |
+| `buildNumber` | `versionCode` / long version code | `CFBundleVersion` |
+| `buildSignature` | SHA-256 signing certificate digest | `''` |
+| `installerStore` | Installing package/store when available | `''` |
+| `installTime` | First install time, milliseconds since epoch | `0` |
+| `updateTime` | Last update time, milliseconds since epoch | `0` |
+
+### Device, system, locale, and storage
+
+| Getter | Android | iOS |
+| --- | --- | --- |
+| `deviceModel` | `Build.MODEL` | Hardware machine identifier, such as `iPhone16,1` |
+| `platform` | `Build.MANUFACTURER` | `UIDevice.model` |
+| `osVersion` | Android release | iOS system version |
+| `systemName` | `Android` | `UIDevice.systemName` |
+| `deviceName` | Device model/name fallback | `UIDevice.name` |
+| `isPhysicalDevice` | Emulator heuristic | Simulator check |
+| `freeDiskSize` / `totalDiskSize` | Data partition bytes | Home filesystem bytes |
+| `physicalRamSize` | Total RAM in MiB | Physical memory in MiB |
+| `availableRamSize` | Available RAM in MiB | `0` |
+| `languageCode` / `languageCode3` | Locale language and ISO-3 code | Preferred language and ISO-3 code |
+| `languageTag` | BCP-47 language tag without region | Preferred language tag without region |
+| `languageScriptCode` | Script code when available | Script code when available |
+| `countryCode` / `countryCode3` | Locale region and ISO-3 code | Preferred region and ISO-3 code |
+| `locale` | Full locale tag | Full preferred language identifier |
+| `timeZone` | Time zone ID | Time zone ID |
+| `utcOffsetSeconds` | Current UTC offset | Current UTC offset |
+
+### Identifiers
+
+| Getter | Android | iOS |
+| --- | --- | --- |
+| `advertisingId` | Google Advertising ID after `refreshAdvertisingId()` | IDFA when authorized |
+| `deviceId` | Android ID, App Set ID, then local ID fallback | IDFV, then local ID fallback |
+| `idfa` / `idfv` | `''` | IDFA / IDFV |
+| `gaid` / `aaid` / `aifa` | Google Advertising ID when available | `''` |
+| `androidId` / `andi` | `Settings.Secure.ANDROID_ID` | `''` |
+| `asid` | App Set ID after `refreshDeviceId()` or `getAll` | `''` |
+| `primaryLocalId` / `secondaryLocalId` | Android KeyStore-backed encrypted values | Keychain-backed values |
+
+### Android-only fields
+
+`androidBoard`, `androidBootloader`, `androidBrand`, `androidDevice`,
+`androidDisplay`, `androidFingerprint`, `androidHardware`, `androidHost`,
+`androidProduct`, `androidSupported32BitAbis`, `androidSupported64BitAbis`,
+`androidSupportedAbis`, `androidTags`, `androidType`,
+`androidSystemFeatures`, `androidIsLowRamDevice`, `androidBaseOs`,
+`androidSdkInt`, `androidRelease`, `androidCodename`,
+`androidIncremental`, `androidPreviewSdkInt`, and
+`androidSecurityPatch` are populated only on Android.
+
+### iOS-only fields
+
+`iosModelName`, `iosLocalizedModel`, `isiOSAppOnMac`, `isiOSAppOnVision`,
+`iosUtsnameSysname`, `iosUtsnameNodename`, `iosUtsnameRelease`,
+`iosUtsnameVersion`, and `iosUtsnameMachine` are populated only on iOS.
 
 ## Installation
 
 ```yaml
 dependencies:
-  x_app_utils: ^0.1.5
+  x_app_utils: ^0.1.6
 ```
 
 Then import the package:
@@ -188,9 +258,11 @@ documented locale defaults:
 | --- | --- |
 | `languageCode` | `en` |
 | `languageCode3` | `eng` |
+| `languageTag` | `en` |
+| `languageScriptCode` | `''` |
 | `countryCode` | `US` |
 | `countryCode3` | `USA` |
-| `locale` | `en_US` |
+| `locale` | `en` |
 
 Integer getters return `0`, boolean getters return `false`, and list getters
 return an empty list when native values are unavailable.
