@@ -1,4 +1,4 @@
-# app_info_utils
+# x_app_utils
 
 A Flutter plugin that exposes unified app, device, locale, timezone, and
 identifier information on iOS and Android.
@@ -25,13 +25,13 @@ your app.
 
 ```yaml
 dependencies:
-  app_info_utils: ^0.1.4
+  x_app_utils: ^0.1.5
 ```
 
 Then import the package:
 
 ```dart
-import 'package:app_info_utils/app_info_utils.dart';
+import 'package:x_app_utils/x_app_utils.dart';
 ```
 
 ## Usage
@@ -42,7 +42,7 @@ For a complete Chinese integration guide, see
 Read values from the shared instance:
 
 ```dart
-final info = AppInfoUtils.instance;
+final info = XAppUtils.instance;
 
 final appName = info.appName;
 final packageName = info.packageName;
@@ -59,7 +59,7 @@ If native values have not been loaded yet, the first getter read starts loading
 them automatically and returns the documented fallback value for that read.
 Later reads return the cached native values.
 
-`AppInfoUtils.instance` is the recommended entry point. `AppInfoUtils()` is
+`XAppUtils.instance` is the recommended entry point. `XAppUtils()` is
 kept as a singleton factory for compatibility.
 
 You may also initialize explicitly during app startup when you want to preload
@@ -68,7 +68,7 @@ native values:
 ```dart
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  final initialized = await AppInfoUtils.instance.init();
+  final initialized = await XAppUtils.instance.init();
   if (!initialized) {
     // Some native values or secure local ID persistence are unavailable.
     // primaryLocalId and secondaryLocalId still have in-memory UUID fallbacks.
@@ -83,20 +83,42 @@ were unavailable. It does not throw for channel/native read failures.
 If you must guarantee that native values are loaded before a local read, use:
 
 ```dart
-final info = await AppInfoUtils.instance.ready;
+final info = await XAppUtils.instance.ready;
 final model = info.deviceModel;
 ```
 
 ## Refreshing Values
 
 ```dart
-final refreshed = await AppInfoUtils.instance.refresh();
-await AppInfoUtils.instance.refreshAdvertisingId();
-await AppInfoUtils.instance.refreshDeviceId();
-await AppInfoUtils.instance.resetLocalId();
+final refreshed = await XAppUtils.instance.refresh();
+await XAppUtils.instance.refreshAdvertisingId();
+await XAppUtils.instance.refreshDeviceId();
+await XAppUtils.instance.resetLocalId();
 ```
 
 The plugin also refreshes cached values when the app returns to the foreground.
+
+## Advertising IDs and Android privacy
+
+`init()` and foreground refreshes do not read advertising identifiers. Read the
+Google advertising ID only when your app has obtained any required user consent:
+
+```dart
+await XAppUtils.instance.refreshAdvertisingId();
+```
+
+The package intentionally does not add Android's `AD_ID` permission to the host
+app. If you use `refreshAdvertisingId()`, add it to the host application's
+`android/app/src/main/AndroidManifest.xml` and complete the applicable Google
+Play Data safety disclosure:
+
+```xml
+<uses-permission android:name="com.google.android.gms.permission.AD_ID" />
+```
+
+`refreshDeviceId()` reads Android's App Set ID on demand. Both calls return an
+empty identifier when the relevant service, permission, or user setting makes
+the value unavailable.
 
 ## Secure Local IDs
 
@@ -111,7 +133,7 @@ namespace; when both namespaces are available on the same platform, values are
 synchronized so future reads stay consistent.
 
 ```dart
-await AppInfoUtils.instance.init(
+await XAppUtils.instance.init(
   localIdStorageOptions: const LocalIdStorageOptions(
     fallbackNamespace: 'my_app',
   ),
@@ -121,15 +143,15 @@ await AppInfoUtils.instance.init(
 Manage either local ID through a single slot-based API:
 
 ```dart
-final primary = await AppInfoUtils.instance.readLocalId();
-final secondary = await AppInfoUtils.instance.readLocalId(
+final primary = await XAppUtils.instance.readLocalId();
+final secondary = await XAppUtils.instance.readLocalId(
   slot: LocalIdSlot.secondary,
 );
 
-await AppInfoUtils.instance.writeLocalId('custom-id');
-final exists = await AppInfoUtils.instance.containsLocalId();
-await AppInfoUtils.instance.deleteLocalId();
-final newPrimary = await AppInfoUtils.instance.resetLocalId();
+await XAppUtils.instance.writeLocalId('custom-id');
+final exists = await XAppUtils.instance.containsLocalId();
+await XAppUtils.instance.deleteLocalId();
+final newPrimary = await XAppUtils.instance.resetLocalId();
 ```
 
 ## iOS IDFA and ATT
@@ -140,7 +162,7 @@ has already been granted.
 To request ATT authorization:
 
 ```dart
-final result = await AppInfoUtils.instance.requestIdfaAuthorization();
+final result = await XAppUtils.instance.requestIdfaAuthorization();
 
 if (result.isSuccess) {
   final idfa = result.idfa;
@@ -172,6 +194,14 @@ documented locale defaults:
 
 Integer getters return `0`, boolean getters return `false`, and list getters
 return an empty list when native values are unavailable.
+
+Disk sizes are bytes. RAM sizes are MiB; iOS reports `0` for
+`availableRamSize`, because iOS has no supported system-wide available-memory
+API.
+
+Local-ID write, delete, and reset methods throw a `StateError` when the native
+secure store cannot complete the requested change. This prevents an in-memory
+value from being reported as persisted when it is not.
 
 ## Publishing
 

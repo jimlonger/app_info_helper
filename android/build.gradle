@@ -1,5 +1,5 @@
-group 'com.hearbaby.app_info_utils'
-version '0.1.0'
+group 'com.hearbaby.x_app_utils'
+version '0.1.5'
 
 buildscript {
     ext.kotlin_version = '2.2.20'
@@ -14,7 +14,7 @@ apply plugin: 'com.android.library'
 apply plugin: 'kotlin-android'
 
 android {
-    namespace 'com.hearbaby.app_info_utils'
+    namespace 'com.hearbaby.x_app_utils'
     compileSdk 35
     defaultConfig { minSdk 23 }
 

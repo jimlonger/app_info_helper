@@ -7,3 +7,11 @@ android/.gradle/
 android/build/
 ios/**/Pods/
 ios/**/.build/
+
+example/.dart_tool/
+example/.flutter-plugins-dependencies
+example/android/.gradle/
+example/build/
+example/ios/Flutter/ephemeral/
+example/ios/Pods/
+example/ios/**/.build/

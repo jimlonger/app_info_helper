@@ -1,0 +1,22 @@
+PODS:
+  - Flutter (1.0.0)
+  - x_app_utils (0.1.5):
+    - Flutter
+
+DEPENDENCIES:
+  - Flutter (from `Flutter`)
+  - x_app_utils (from `.symlinks/plugins/x_app_utils/ios`)
+
+EXTERNAL SOURCES:
+  Flutter:
+    :path: Flutter
+  x_app_utils:
+    :path: ".symlinks/plugins/x_app_utils/ios"
+
+SPEC CHECKSUMS:
+  Flutter: cabc95a1d2626b1b06e7179b784ebcf0c0cde467
+  x_app_utils: 4317cacbbff5e3f12d8d5c5771835c832cd8d8ed
+
+PODFILE CHECKSUM: ce2a4dd764e1c7aeed6a7cdc5e61d092b6dc6d32
+
+COCOAPODS: 1.16.2

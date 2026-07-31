@@ -1,18 +1,28 @@
-name: app_info_utils_example
-description: Demonstrates how to use the app_info_utils plugin.
+name: x_app_utils_example
+description: Demonstrates how to use the x_app_utils plugin.
 publish_to: none
+version: 0.1.5+1
 
 environment:
   sdk: '>=3.3.0 <4.0.0'
 
 dependencies:
-  app_info_utils:
+  x_app_utils:
     path: ../
   flutter:
     sdk: flutter
+  get: ^4.7.3
 
 dev_dependencies:
+  flutter_test:
+    sdk: flutter
   flutter_lints: ^6.0.0
 
 flutter:
+  config:
+    # The local plugin directory is named app_info_helper while the published
+    # Dart package is x_app_utils. Flutter SwiftPM currently derives the
+    # local package identity from the directory name, so use the plugin's
+    # supported CocoaPods integration for this example.
+    enable-swift-package-manager: false
   uses-material-design: true

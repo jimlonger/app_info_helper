@@ -1,7 +1,21 @@
+## 0.1.5
+
+- Renamed the package to `x_app_utils` and the public entry point to
+  `XAppUtils`.
+- Corrected the GitHub homepage, repository, and issue-tracker links used by
+  pub.dev to point to `jimlonger/app_info_helper`.
+- Made Android advertising ID and App Set ID reads explicit, on-demand calls.
+  The plugin no longer injects the `AD_ID` permission into host apps.
+- Report `0` for unavailable iOS available RAM instead of reporting total RAM.
+- Report unknown iOS ISO-3 locale codes as unavailable instead of a false US or
+  English value.
+- Surface secure local-ID write, delete, and reset failures instead of updating
+  the in-memory cache as if persistence had succeeded.
+
 ## 0.1.4
 
-- Renamed the package to `app_info_utils` and the public entry point to
-  `AppInfoUtils`.
+- Renamed the package to `x_app_utils` and the public entry point to
+  `XAppUtils`.
 - Replaced the previous local UUID with secure `primaryLocalId` and
   `secondaryLocalId` values.
 - Added slot-based local ID read, write, contains, delete, and reset APIs.
@@ -22,9 +36,9 @@
 
 ## 0.1.1
 
-- Added `AppInfoUtils.instance` as the recommended singleton entry point.
+- Added `XAppUtils.instance` as the recommended singleton entry point.
 - Added automatic lazy initialization when synchronous getters are first read.
-- Added `AppInfoUtils.instance.ready` for callers that need to await loaded native values.
+- Added `XAppUtils.instance.ready` for callers that need to await loaded native values.
 - Updated usage documentation while keeping explicit `init()` support.
 
 ## 0.1.0
