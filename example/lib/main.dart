@@ -2,9 +2,7 @@ import 'dart:convert';
 
 import 'package:x_app_utils/x_app_utils.dart';
 import 'package:x_app_utils/event_bus_manager_flutter.dart';
-import 'package:x_app_utils/event_bus_manager_getx.dart';
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -30,7 +28,7 @@ class ExampleApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GetMaterialApp(
+    return MaterialApp(
       title: 'EventManager Example',
       theme: ThemeData(colorSchemeSeed: Colors.indigo, useMaterial3: true),
       home: const EventManagerHomePage(),
@@ -101,14 +99,6 @@ class _EventManagerHomePageState extends State<EventManagerHomePage>
               ),
             ),
             child: const Text('Flutter State 自动销毁'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(context).push<void>(
-              MaterialPageRoute<void>(
-                builder: (_) => const GetxEventManagerPage(),
-              ),
-            ),
-            child: const Text('GetX Controller 自动销毁'),
           ),
           FilledButton(
             onPressed: () => Navigator.of(context).push<void>(
@@ -198,78 +188,6 @@ class _StateEventManagerPageState extends State<StateEventManagerPage>
         onFire: _fire,
         onTogglePause: _togglePause,
         description: '返回上一页时 State.dispose() 自动取消 owner(this) 的订阅。',
-      ),
-    );
-  }
-}
-
-class GetxEventManagerController extends GetxController
-    with EventManagerGetxMixin {
-  final receivedValue = 0.obs;
-  final paused = false.obs;
-  late final EventSubscription<CounterChangedEvent> _subscription;
-
-  @override
-  void onInit() {
-    super.onInit();
-    _subscription = EventBusManager.owner(this).listen<CounterChangedEvent>(
-      (event) => receivedValue.value = event.value,
-    );
-  }
-
-  void fire() {
-    EventBusManager.fire(
-      CounterChangedEvent(source: 'GetX page', value: receivedValue.value + 1),
-    );
-  }
-
-  void togglePause() {
-    paused.toggle();
-    if (paused.value) {
-      _subscription.pause();
-    } else {
-      _subscription.resume();
-    }
-  }
-}
-
-class GetxEventManagerPage extends StatefulWidget {
-  const GetxEventManagerPage({super.key});
-
-  @override
-  State<GetxEventManagerPage> createState() => _GetxEventManagerPageState();
-}
-
-class _GetxEventManagerPageState extends State<GetxEventManagerPage> {
-  static const String _tag = 'event-manager-example-getx';
-  late final GetxEventManagerController _controller;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = Get.put(GetxEventManagerController(), tag: _tag);
-  }
-
-  @override
-  void dispose() {
-    // Get.delete invokes the controller's onClose(), where EventManagerGetxMixin
-    // automatically cancels owner(this) subscriptions.
-    Get.delete<GetxEventManagerController>(tag: _tag);
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('GetX Controller 自动销毁')),
-      body: Obx(
-        () => _EventPageBody(
-          receivedLabel: 'GetX 接收值: ${_controller.receivedValue.value}',
-          paused: _controller.paused.value,
-          onFire: _controller.fire,
-          onTogglePause: _controller.togglePause,
-          description: '页面关闭时 Get.delete() 触发 onClose()，订阅自动取消。',
-        ),
       ),
     );
   }

@@ -6,9 +6,9 @@ dependency.
 
 ## Any lifecycle-aware object
 
-The core API does not depend on Flutter or GetX. Any object can use
-`EventManagerMixin` and invoke `disposeEventManager()` in
-its own lifecycle method.
+The core API does not depend on Flutter. Any object can use
+`EventManagerMixin` and invoke `disposeEventManager()` in its own lifecycle
+method.
 
 ```dart
 class SocketService with EventManagerMixin {
@@ -25,9 +25,9 @@ class SocketService with EventManagerMixin {
 ```
 
 Objects that already provide automatic lifecycle callbacks can call that method
-from their `dispose`, `close`, `onClose`, or equivalent callback. The event bus
-cannot automatically detect destruction of arbitrary Dart objects without such
-a lifecycle signal.
+from their `dispose`, `close`, or equivalent callback. The event bus cannot
+automatically detect destruction of arbitrary Dart objects without such a
+lifecycle signal.
 
 ## Send an event
 
@@ -79,28 +79,6 @@ class CartPageState extends State<CartPage>
   }
 }
 ```
-
-## GetX controller lifecycle
-
-Import `package:x_app_utils/event_bus_manager_getx.dart` and mix in
-`EventManagerGetxMixin`. Owned listeners are cancelled from
-`GetxController.onClose()`.
-
-```dart
-class CartController extends GetxController
-    with EventManagerGetxMixin {
-  @override
-  void onInit() {
-    super.onInit();
-    EventBusManager.owner(this).listen<CartChangedEvent>((event) {
-      // Update controller state.
-    });
-  }
-}
-```
-
-GetX must manage the controller lifecycle for `onClose()` to run. For example,
-do not register a page-scoped controller as permanent.
 
 ## Pause and resume
 

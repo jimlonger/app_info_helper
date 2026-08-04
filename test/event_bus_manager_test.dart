@@ -1,8 +1,6 @@
 import 'package:x_app_utils/event_bus_manager_flutter.dart';
-import 'package:x_app_utils/event_bus_manager_getx.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:get/get.dart';
 
 final class _CartChangedEvent {
   const _CartChangedEvent(this.itemCount);
@@ -17,8 +15,6 @@ final class _OtherEvent {
 final class _TestOwner with EventManagerMixin {
   void dispose() => disposeEventManager();
 }
-
-class _GetxTestController extends GetxController with EventManagerGetxMixin {}
 
 class _StateTestWidget extends StatefulWidget {
   const _StateTestWidget({required this.onEvent});
@@ -108,22 +104,6 @@ void main() {
 
     owner.dispose();
     expect(owner.isEventManagerDisposed, isTrue);
-  });
-
-  test('GetX lifecycle cancellation removes owned subscriptions', () async {
-    final controller = _GetxTestController();
-    var callCount = 0;
-    final subscription =
-        EventBusManager.owner(controller).listen<_CartChangedEvent>(
-      (_) => callCount++,
-    );
-
-    controller.onClose();
-    EventBusManager.fire(const _CartChangedEvent(1));
-    await _flushEvents();
-
-    expect(callCount, 0);
-    expect(subscription.isCancelled, isTrue);
   });
 
   testWidgets(

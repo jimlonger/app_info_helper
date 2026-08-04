@@ -2,8 +2,8 @@
 
 Runnable Android and iOS example for `x_app_utils` and `EventBusManager`.
 
-It includes separate pages for Flutter `State`, GetX controllers, and ordinary
-service objects, plus an event log and platform information on the home page.
+It includes separate pages for Flutter `State` and ordinary service objects,
+plus an event log and platform information on the home page.
 
 ## Run
 

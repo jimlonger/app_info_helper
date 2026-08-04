@@ -181,7 +181,7 @@ final class EventBusManager {
   ///
   /// This creates an unowned subscription; callers must call `cancel()`.
   /// Use `EventBusManager.owner(this).listen<T>(...)` for lifecycle-managed
-  /// subscriptions in a Flutter State or GetX controller.
+  /// subscriptions in a Flutter State object.
   static EventSubscription<T> listen<T>(void Function(T event) onData) {
     return _listen<T>(onData);
   }

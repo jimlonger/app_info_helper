@@ -11,7 +11,6 @@ dependencies:
     path: ../
   flutter:
     sdk: flutter
-  get: ^4.7.3
 
 dev_dependencies:
   flutter_test:

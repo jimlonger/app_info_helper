@@ -1,3 +1,10 @@
+## 0.2.0
+
+- **Breaking:** Remove the GetX dependency and the
+  `event_bus_manager_getx.dart` / `EventManagerGetxMixin` APIs.
+- Simplify the example app to use Flutter's built-in `MaterialApp` and State
+  lifecycle support.
+
 ## 0.1.6
 
 - Read iOS language metadata from the device's preferred-language list instead

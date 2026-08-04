@@ -20,8 +20,8 @@ your app.
   convenience getters.
 - iOS ATT authorization helper for requesting IDFA access at the right moment in
   your app flow.
-- Lifecycle-friendly EventBus helpers for plain Dart owners, Flutter `State`,
-  and GetX controllers.
+- Lifecycle-friendly EventBus helpers for plain Dart owners and Flutter
+  `State` objects.
 
 ## Platform Field Guide
 

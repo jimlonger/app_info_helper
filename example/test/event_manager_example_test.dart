@@ -14,17 +14,6 @@ void main() {
     expect(find.text('State 接收值: 1'), findsOneWidget);
   });
 
-  testWidgets('GetX event page sends and receives events', (tester) async {
-    await tester.pumpWidget(const ExampleApp());
-
-    await tester.tap(find.text('GetX Controller 自动销毁'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('发送 CounterChangedEvent'));
-    await tester.pump();
-
-    expect(find.text('GetX 接收值: 1'), findsOneWidget);
-  });
-
   testWidgets('service event page receives service messages', (tester) async {
     await tester.pumpWidget(const ExampleApp());
 
